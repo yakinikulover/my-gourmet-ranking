@@ -105,7 +105,6 @@ struct ContentView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
-                        topSummarySection
                         selectorSection
 
                         if hasSelectableCategory {
@@ -141,23 +140,8 @@ struct ContentView: View {
                 .disabled(!hasSelectableCategory)
                 .padding(20)
             }
-            .navigationTitle("Gourmet")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.light, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.headline)
-                            .foregroundStyle(AppTheme.ink)
-                            .frame(width: 40, height: 40)
-                    }
-                    .accessibilityLabel("設定")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarHidden(true)
             .onAppear(perform: syncSelection)
             .onChange(of: dataStore.sortedMainGenres) { _, _ in syncSelection() }
             .onChange(of: dataStore.sortedSubGenres) { _, _ in syncSelection() }
@@ -172,36 +156,13 @@ struct ContentView: View {
         }
     }
 
-    private var topSummarySection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(selectedMainGenre?.name ?? "未設定")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.softText)
-            HStack(alignment: .firstTextBaseline) {
-                Text("\(selectedSubGenre?.name ?? "未設定") Best5")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(AppTheme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.74)
-                Spacer()
-                Text("\(rankedCount)/5")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(AppTheme.ink)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(AppTheme.softFill)
-                    .clipShape(Capsule())
-            }
-            Text("順位が低くなるほどコンパクトに表示されます。")
-                .font(.footnote)
-                .foregroundStyle(AppTheme.softText)
-        }
-        .padding(.bottom, 4)
-    }
-
     private var selectorSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.softText)
+
                 Menu {
                     ForEach(dataStore.sortedMainGenres) { genre in
                         Button(genre.name) {
@@ -210,8 +171,12 @@ struct ContentView: View {
                         }
                     }
                 } label: {
-                    SelectorChip(title: selectedMainGenre?.name ?? "大ジャンル", icon: "fork.knife")
+                    FilterToken(title: selectedMainGenre?.name ?? "大ジャンル")
                 }
+
+                Rectangle()
+                    .fill(AppTheme.hairline)
+                    .frame(width: 1, height: 22)
 
                 Menu {
                     ForEach(availableSubGenres) { subGenre in
@@ -220,10 +185,29 @@ struct ContentView: View {
                         }
                     }
                 } label: {
-                    SelectorChip(title: selectedSubGenre?.name ?? "小ジャンル", icon: "tag")
+                    FilterToken(title: selectedSubGenre?.name ?? "小ジャンル")
                 }
                 .disabled(availableSubGenres.isEmpty)
+
+                Spacer(minLength: 4)
+
+                NavigationLink {
+                    SettingsView()
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.ink)
+                        .frame(width: 36, height: 36)
+                        .background(AppTheme.softFill)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("設定")
             }
+            .padding(.leading, 14)
+            .padding(.trailing, 8)
+            .padding(.vertical, 8)
+            .background(AppTheme.softFill)
+            .clipShape(Capsule())
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -249,31 +233,47 @@ struct ContentView: View {
     }
 
     private var bestSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(bestRows) { row in
-                switch row {
-                case .store(let rank, let store):
-                    Button {
-                        detailSeed = StoreDetailSeed(id: store.id)
-                    } label: {
-                        StoreCardView(store: store, rankLabel: "\(rank)位", rank: rank, style: .best)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Best5")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                Text("\(rankedCount)/5")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.ink)
+                    .clipShape(Capsule())
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(bestRows) { row in
+                    switch row {
+                    case .store(let rank, let store):
+                        Button {
+                            detailSeed = StoreDetailSeed(id: store.id)
+                        } label: {
+                            StoreCardView(store: store, rankLabel: "\(rank)位", rank: rank, style: .best)
+                        }
+                        .buttonStyle(.plain)
+                    case .tbd(let rank):
+                        Button {
+                            openForm(rank: .ranked(rank))
+                        } label: {
+                            TBDCardView(rank: rank)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                case .tbd(let rank):
-                    Button {
-                        openForm(rank: .ranked(rank))
-                    } label: {
-                        TBDCardView(rank: rank)
-                    }
-                    .buttonStyle(.plain)
                 }
             }
-        }
-        .background(AppTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(AppTheme.hairline, lineWidth: 1)
+            .background(AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(AppTheme.hairline, lineWidth: 1)
+            }
         }
     }
 
@@ -355,28 +355,19 @@ struct ContentView: View {
     }
 }
 
-struct SelectorChip: View {
+struct FilterToken: View {
     let title: String
-    let icon: String
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.ink)
+        HStack(spacing: 5) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.ink)
                 .lineLimit(1)
             Image(systemName: "chevron.down")
-                .font(.caption.weight(.semibold))
+                .font(.caption2.weight(.bold))
                 .foregroundStyle(AppTheme.muted)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(AppTheme.softFill)
-        .clipShape(Capsule())
     }
 }
 
