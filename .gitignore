@@ -1,5 +1,19 @@
-node_modules
-dist
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Legacy web artifacts
+node_modules/
+dist/
+
+# Environment and OS files
 .env
 .env.local
 .DS_Store
