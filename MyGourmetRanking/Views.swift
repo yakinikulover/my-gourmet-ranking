@@ -1,5 +1,63 @@
 import SwiftUI
 
+enum AppTheme {
+    static let background = Color(hex: "F6F7FB")
+    static let ink = Color(hex: "16151A")
+    static let muted = Color(hex: "6F6B7A")
+    static let coral = Color(hex: "FF4D67")
+    static let hotPink = Color(hex: "FF2F8E")
+    static let mint = Color(hex: "34D399")
+    static let lemon = Color(hex: "D9F99D")
+    static let cyan = Color(hex: "38BDF8")
+    static let card = Color.white.opacity(0.88)
+
+    static let heroGradient = LinearGradient(
+        colors: [Color(hex: "111111"), Color(hex: "FF4D67"), Color(hex: "38BDF8")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let accentGradient = LinearGradient(
+        colors: [hotPink, coral, mint],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+}
+
+extension Color {
+    init(hex: String) {
+        let scanner = Scanner(string: hex)
+        var value: UInt64 = 0
+        scanner.scanHexInt64(&value)
+
+        let red = Double((value >> 16) & 0xFF) / 255
+        let green = Double((value >> 8) & 0xFF) / 255
+        let blue = Double(value & 0xFF) / 255
+        self.init(red: red, green: green, blue: blue)
+    }
+}
+
+struct AppBackgroundView: View {
+    var body: some View {
+        LinearGradient(
+            colors: [AppTheme.background, Color.white, Color(hex: "EEF7FF")],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+}
+
+extension View {
+    func modernCard(cornerRadius: CGFloat = 24) -> some View {
+        self
+            .background(.ultraThinMaterial)
+            .background(AppTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
     @State private var selectedMainGenreId = ""
@@ -48,11 +106,23 @@ struct ContentView: View {
         !selectedMainGenreId.isEmpty && !selectedSubGenreId.isEmpty
     }
 
+    private var rankedCount: Int {
+        bestRows.filter { row in
+            if case .store = row {
+                return true
+            }
+            return false
+        }.count
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
+                AppBackgroundView()
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
+                        heroSection
                         selectorSection
 
                         if hasSelectableCategory {
@@ -68,31 +138,41 @@ struct ContentView: View {
                             .padding(.top, 40)
                         }
                     }
-                    .padding(16)
-                    .padding(.bottom, 88)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+                    .padding(.bottom, 96)
                 }
+                .scrollIndicators(.hidden)
 
                 Button {
                     openForm(rank: firstTBDRank.map(StoreRank.ranked) ?? .archive)
                 } label: {
                     Image(systemName: "plus")
                         .font(.title2.bold())
+                        .accessibilityLabel("登録")
                         .foregroundStyle(.white)
-                        .frame(width: 58, height: 58)
-                        .background(hasSelectableCategory ? Color.green : Color.gray)
-                        .clipShape(Circle())
-                        .shadow(radius: 10, y: 4)
+                    .frame(width: 62, height: 62)
+                    .background(hasSelectableCategory ? AppTheme.accentGradient : LinearGradient(colors: [.gray], startPoint: .leading, endPoint: .trailing))
+                    .clipShape(Circle())
+                    .shadow(color: AppTheme.hotPink.opacity(0.28), radius: 18, x: 0, y: 10)
                 }
                 .disabled(!hasSelectableCategory)
                 .padding(20)
             }
-            .navigationTitle("グルメランキング")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         SettingsView()
                     } label: {
                         Image(systemName: "gearshape")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.ink)
+                            .frame(width: 40, height: 40)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
                     }
                     .accessibilityLabel("設定")
                 }
@@ -111,45 +191,104 @@ struct ContentView: View {
         }
     }
 
-    private var selectorSection: some View {
-        VStack(spacing: 12) {
-            Picker("大ジャンル", selection: $selectedMainGenreId) {
-                ForEach(dataStore.sortedMainGenres) { genre in
-                    Text(genre.name).tag(genre.id)
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("MY GOURMET")
+                        .font(.caption.bold())
+                        .tracking(1.8)
+                        .foregroundStyle(.white.opacity(0.72))
+                    Text("いま一番うまい店を、\n5つだけ残す。")
+                        .font(.system(size: 34, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineSpacing(2)
+                        .minimumScaleFactor(0.86)
                 }
+                Spacer()
+                Image(systemName: "sparkles")
+                    .font(.title2.bold())
+                    .foregroundStyle(AppTheme.lemon)
+                    .padding(12)
+                    .background(.white.opacity(0.14))
+                    .clipShape(Circle())
             }
-            .pickerStyle(.menu)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            Picker("小ジャンル", selection: $selectedSubGenreId) {
-                ForEach(availableSubGenres) { subGenre in
-                    Text(subGenre.name).tag(subGenre.id)
+            HStack(spacing: 10) {
+                MetricPill(value: "\(rankedCount)/5", label: "Best")
+                MetricPill(value: "\(archiveStores.count)", label: "Archive")
+                MetricPill(value: selectedSubGenre?.name ?? "未設定", label: selectedMainGenre?.name ?? "Genre")
+            }
+        }
+        .padding(22)
+        .background(AppTheme.heroGradient)
+        .overlay(alignment: .bottomTrailing) {
+            Text("Best5")
+                .font(.system(size: 56, weight: .black, design: .rounded))
+                .foregroundStyle(.white.opacity(0.08))
+                .padding(.trailing, 8)
+                .padding(.bottom, 4)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .shadow(color: AppTheme.coral.opacity(0.28), radius: 24, x: 0, y: 16)
+    }
+
+    private var selectorSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Menu {
+                    ForEach(dataStore.sortedMainGenres) { genre in
+                        Button(genre.name) {
+                            selectedMainGenreId = genre.id
+                            selectedSubGenreId = preferredSubGenreId(for: genre.id)
+                        }
+                    }
+                } label: {
+                    SelectorChip(title: selectedMainGenre?.name ?? "大ジャンル", icon: "fork.knife")
                 }
+
+                Menu {
+                    ForEach(availableSubGenres) { subGenre in
+                        Button(subGenre.name) {
+                            selectedSubGenreId = subGenre.id
+                        }
+                    }
+                } label: {
+                    SelectorChip(title: selectedSubGenre?.name ?? "小ジャンル", icon: "tag")
+                }
+                .disabled(availableSubGenres.isEmpty)
             }
-            .pickerStyle(.menu)
-            .disabled(availableSubGenres.isEmpty)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .onChange(of: selectedMainGenreId) { _, newValue in
-                selectedSubGenreId = dataStore.subGenres(for: newValue).first?.id ?? ""
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(availableSubGenres) { subGenre in
+                        Button {
+                            selectedSubGenreId = subGenre.id
+                        } label: {
+                            Text(subGenre.name)
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(selectedSubGenreId == subGenre.id ? .white : AppTheme.ink)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(selectedSubGenreId == subGenre.id ? AnyShapeStyle(AppTheme.accentGradient) : AnyShapeStyle(.ultraThinMaterial))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 2)
             }
+            .scrollIndicators(.hidden)
         }
     }
 
     private var bestSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(selectedMainGenre?.name ?? "未設定")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text("\(selectedSubGenre?.name ?? "未設定") Best5")
-                    .font(.largeTitle.bold())
-            }
+            SectionTitleView(
+                title: "\(selectedSubGenre?.name ?? "未設定") Best5",
+                subtitle: selectedMainGenre?.name ?? "未設定",
+                count: "\(rankedCount)/5"
+            )
 
             ForEach(bestRows) { row in
                 switch row {
@@ -174,22 +313,19 @@ struct ContentView: View {
 
     private var archiveSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Archive")
-                    .font(.title2.bold())
-                Spacer()
-                Text("\(archiveStores.count)件")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
+            SectionTitleView(title: "Archive", subtitle: "Best5外の記録", count: "\(archiveStores.count)")
 
             if archiveStores.isEmpty {
-                Text("Archiveの店舗はまだありません。")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Archiveの店舗はまだありません。")
+                        .font(.headline)
+                    Text("Best5から外した店や未ランクインの店がここに残ります。")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
+                .modernCard()
             } else {
                 ForEach(archiveStores) { store in
                     Button {
@@ -210,13 +346,29 @@ struct ContentView: View {
     private func syncSelection() {
         let mainGenres = dataStore.sortedMainGenres
         if selectedMainGenreId.isEmpty || !mainGenres.contains(where: { $0.id == selectedMainGenreId }) {
-            selectedMainGenreId = mainGenres.first?.id ?? ""
+            selectedMainGenreId = mainGenres.max { lhs, rhs in
+                storeCount(mainGenreId: lhs.id) < storeCount(mainGenreId: rhs.id)
+            }?.id ?? mainGenres.first?.id ?? ""
         }
 
         let subGenres = dataStore.subGenres(for: selectedMainGenreId)
         if selectedSubGenreId.isEmpty || !subGenres.contains(where: { $0.id == selectedSubGenreId }) {
-            selectedSubGenreId = subGenres.first?.id ?? ""
+            selectedSubGenreId = preferredSubGenreId(for: selectedMainGenreId)
         }
+    }
+
+    private func preferredSubGenreId(for mainGenreId: String) -> String {
+        let subGenres = dataStore.subGenres(for: mainGenreId)
+        return subGenres.max { lhs, rhs in
+            storeCount(mainGenreId: mainGenreId, subGenreId: lhs.id)
+                < storeCount(mainGenreId: mainGenreId, subGenreId: rhs.id)
+        }?.id ?? subGenres.first?.id ?? ""
+    }
+
+    private func storeCount(mainGenreId: String, subGenreId: String? = nil) -> Int {
+        dataStore.stores.filter { store in
+            store.mainGenreId == mainGenreId && (subGenreId == nil || store.subGenreId == subGenreId)
+        }.count
     }
 
     private func openForm(rank: StoreRank) {
@@ -226,6 +378,81 @@ struct ContentView: View {
             subGenreId: selectedSubGenreId,
             rank: rank
         )
+    }
+}
+
+struct MetricPill: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.headline.bold())
+                .lineLimit(1)
+            Text(label)
+                .font(.caption2.bold())
+                .foregroundStyle(.white.opacity(0.68))
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(.white.opacity(0.13))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct SelectorChip: View {
+    let title: String
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.subheadline.bold())
+                .foregroundStyle(AppTheme.coral)
+            Text(title)
+                .font(.subheadline.bold())
+                .foregroundStyle(AppTheme.ink)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.caption.bold())
+                .foregroundStyle(AppTheme.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .modernCard(cornerRadius: 18)
+    }
+}
+
+struct SectionTitleView: View {
+    let title: String
+    let subtitle: String
+    let count: String
+
+    var body: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(subtitle)
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.coral)
+                    .tracking(0.8)
+                Text(title)
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(AppTheme.ink)
+            }
+            Spacer()
+            Text(count)
+                .font(.subheadline.bold())
+                .foregroundStyle(AppTheme.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.lemon)
+                .clipShape(Capsule())
+        }
     }
 }
 
@@ -266,37 +493,74 @@ struct StoreCardView: View {
     let rankLabel: String
     var style: StoreCardStyle = .best
 
+    private var imageSize: CGFloat {
+        switch style {
+        case .best: 92
+        case .archive: 72
+        case .compact: 62
+        }
+    }
+
+    private var isFirstRank: Bool {
+        rankLabel == "1位"
+    }
+
     var body: some View {
         HStack(spacing: 14) {
-            ThumbnailView(imageUrl: store.imageUrl, name: store.name, size: style == .compact ? 58 : 76)
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
+            ZStack(alignment: .topLeading) {
+                ThumbnailView(imageUrl: store.imageUrl, name: store.name, size: imageSize)
+                if style == .best {
                     Text(rankLabel)
                         .font(.caption.bold())
-                        .foregroundStyle(style == .archive ? Color.secondary : Color.green)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
-                        .background(style == .archive ? Color(.secondarySystemBackground) : Color.green.opacity(0.12))
+                        .background(isFirstRank ? AppTheme.accentGradient : LinearGradient(colors: [AppTheme.ink.opacity(0.86), AppTheme.ink.opacity(0.64)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .clipShape(Capsule())
+                        .padding(6)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 7) {
+                    if style != .best {
+                        Text(rankLabel)
+                            .font(.caption.bold())
+                            .foregroundStyle(style == .archive ? AppTheme.muted : AppTheme.coral)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(Capsule())
+                    }
                     Text(store.area ?? "エリア未登録")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.muted)
+                        .lineLimit(1)
                 }
 
                 Text(store.name)
-                    .font(.headline)
+                    .font(.system(size: style == .best ? 19 : 16, weight: .black, design: .rounded))
+                    .foregroundStyle(AppTheme.ink)
                     .lineLimit(1)
                 Text(store.memo ?? "メモ未登録")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.muted)
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
+
+            if style == .best {
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .foregroundStyle(AppTheme.muted.opacity(0.65))
+            }
         }
-        .padding(14)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(style == .compact ? 10 : 14)
+        .modernCard(cornerRadius: style == .compact ? 18 : 24)
+        .overlay {
+            RoundedRectangle(cornerRadius: style == .compact ? 18 : 24, style: .continuous)
+                .stroke(isFirstRank ? AppTheme.hotPink.opacity(0.35) : Color.white.opacity(0.45), lineWidth: 1)
+        }
         .opacity(style == .archive ? 0.9 : 1)
     }
 }
@@ -308,28 +572,32 @@ struct TBDCardView: View {
         HStack(spacing: 14) {
             Text("\(rank)位")
                 .font(.headline.bold())
-                .foregroundStyle(.secondary)
-                .frame(width: 54, height: 54)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .foregroundStyle(AppTheme.coral)
+                .frame(width: 58, height: 58)
+                .background(AppTheme.coral.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("TBD")
                     .font(.title3.bold())
+                    .foregroundStyle(AppTheme.ink)
                 Text("この順位に店舗を登録")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.muted)
             }
             Spacer()
+
+            Image(systemName: "plus.circle.fill")
+                .font(.title2)
+                .foregroundStyle(AppTheme.coral)
         }
         .padding(14)
-        .background(.white)
+        .background(.white.opacity(0.72))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
-                .foregroundStyle(Color(.separator))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(AppTheme.coral.opacity(0.35), style: StrokeStyle(lineWidth: 1.3, dash: [7]))
         )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }
 
@@ -356,15 +624,15 @@ struct ThumbnailView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: min(22, size / 3.5), style: .continuous))
     }
 
     private var placeholder: some View {
         ZStack {
-            Color(.secondarySystemBackground)
-            Text("No image")
-                .font(.caption2.bold())
-                .foregroundStyle(.secondary)
+            LinearGradient(colors: [AppTheme.coral.opacity(0.18), AppTheme.cyan.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: "fork.knife")
+                .font(.title3.bold())
+                .foregroundStyle(AppTheme.coral)
         }
     }
 }
@@ -446,6 +714,9 @@ struct StoreFormView: View {
                         .lineLimit(3...6)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppBackgroundView())
+            .tint(AppTheme.coral)
             .navigationTitle(seed.store == nil ? "店舗を登録" : "店舗を編集")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -502,11 +773,28 @@ struct StoreDetailView: View {
                 if let store {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
-                            ThumbnailView(imageUrl: store.imageUrl, name: store.name, size: 220)
-                                .frame(maxWidth: .infinity)
+                            ZStack(alignment: .bottomLeading) {
+                                DetailHeroImage(imageUrl: store.imageUrl, name: store.name)
+                                LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(store.rank.label)
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(AppTheme.accentGradient)
+                                        .clipShape(Capsule())
+                                    Text(store.name)
+                                        .font(.system(size: 30, weight: .black, design: .rounded))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(2)
+                                }
+                                .padding(18)
+                            }
+                            .frame(height: 280)
+                            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
 
                             VStack(alignment: .leading, spacing: 12) {
-                                detailRow("店名", store.name)
                                 detailRow("大ジャンル", dataStore.mainGenreName(for: store.mainGenreId))
                                 detailRow("小ジャンル", dataStore.subGenreName(for: store.subGenreId))
                                 detailRow("現在順位", store.rank.label)
@@ -554,6 +842,7 @@ struct StoreDetailView: View {
                         }
                         .padding()
                     }
+                    .background(AppBackgroundView())
                 } else {
                     ContentUnavailableView("店舗が見つかりません", systemImage: "questionmark.folder")
                 }
@@ -576,14 +865,41 @@ struct StoreDetailView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption.bold())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppTheme.coral)
             Text(value)
                 .font(.body)
+                .foregroundStyle(AppTheme.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .modernCard(cornerRadius: 18)
+    }
+}
+
+struct DetailHeroImage: View {
+    let imageUrl: String?
+    let name: String
+
+    var body: some View {
+        Group {
+            if let imageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Rectangle()
+                            .fill(AppTheme.heroGradient)
+                    }
+                }
+            } else {
+                Rectangle()
+                    .fill(AppTheme.heroGradient)
+            }
+        }
+        .accessibilityLabel(name)
     }
 }
 
@@ -656,7 +972,10 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
         }
+        .background(AppBackgroundView())
+        .tint(AppTheme.coral)
         .navigationTitle("設定")
         .onAppear(perform: syncDrafts)
         .onChange(of: dataStore.sortedMainGenres) { _, _ in syncMainGenreDrafts() }

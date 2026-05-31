@@ -22,7 +22,7 @@ final class GourmetDataStore: ObservableObject {
     }
 
     init() {
-        stores = Self.load([Store].self, key: StorageKey.stores) ?? []
+        stores = Self.load([Store].self, key: StorageKey.stores) ?? InitialGenres.sampleStores
         mainGenres = Self.load([MainGenre].self, key: StorageKey.mainGenres) ?? InitialGenres.mainGenres
         subGenres = Self.load([SubGenre].self, key: StorageKey.subGenres) ?? InitialGenres.subGenres
     }
