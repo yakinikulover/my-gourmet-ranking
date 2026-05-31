@@ -1,27 +1,13 @@
 import SwiftUI
 
 enum AppTheme {
-    static let background = Color(hex: "F6F7FB")
-    static let ink = Color(hex: "16151A")
-    static let muted = Color(hex: "6F6B7A")
-    static let coral = Color(hex: "FF4D67")
-    static let hotPink = Color(hex: "FF2F8E")
-    static let mint = Color(hex: "34D399")
-    static let lemon = Color(hex: "D9F99D")
-    static let cyan = Color(hex: "38BDF8")
-    static let card = Color.white.opacity(0.88)
-
-    static let heroGradient = LinearGradient(
-        colors: [Color(hex: "111111"), Color(hex: "FF4D67"), Color(hex: "38BDF8")],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let accentGradient = LinearGradient(
-        colors: [hotPink, coral, mint],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static let background = Color.white
+    static let ink = Color.black
+    static let muted = Color(hex: "657786")
+    static let softText = Color(hex: "536471")
+    static let hairline = Color(hex: "EFF3F4")
+    static let softFill = Color(hex: "F7F9F9")
+    static let card = Color.white
 }
 
 extension Color {
@@ -39,22 +25,19 @@ extension Color {
 
 struct AppBackgroundView: View {
     var body: some View {
-        LinearGradient(
-            colors: [AppTheme.background, Color.white, Color(hex: "EEF7FF")],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        AppTheme.background.ignoresSafeArea()
     }
 }
 
 extension View {
-    func modernCard(cornerRadius: CGFloat = 24) -> some View {
+    func modernCard(cornerRadius: CGFloat = 18) -> some View {
         self
-            .background(.ultraThinMaterial)
             .background(AppTheme.card)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 18, x: 0, y: 10)
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(AppTheme.hairline, lineWidth: 1)
+            }
     }
 }
 
@@ -121,8 +104,8 @@ struct ContentView: View {
                 AppBackgroundView()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        heroSection
+                    VStack(alignment: .leading, spacing: 18) {
+                        topSummarySection
                         selectorSection
 
                         if hasSelectableCategory {
@@ -138,11 +121,10 @@ struct ContentView: View {
                             .padding(.top, 40)
                         }
                     }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 8)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
                     .padding(.bottom, 96)
                 }
-                .scrollIndicators(.hidden)
 
                 Button {
                     openForm(rank: firstTBDRank.map(StoreRank.ranked) ?? .archive)
@@ -152,16 +134,17 @@ struct ContentView: View {
                         .accessibilityLabel("登録")
                         .foregroundStyle(.white)
                     .frame(width: 62, height: 62)
-                    .background(hasSelectableCategory ? AppTheme.accentGradient : LinearGradient(colors: [.gray], startPoint: .leading, endPoint: .trailing))
+                    .background(hasSelectableCategory ? AppTheme.ink : Color.gray)
                     .clipShape(Circle())
-                    .shadow(color: AppTheme.hotPink.opacity(0.28), radius: 18, x: 0, y: 10)
+                    .shadow(color: Color.black.opacity(0.16), radius: 14, x: 0, y: 8)
                 }
                 .disabled(!hasSelectableCategory)
                 .padding(20)
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationTitle("Gourmet")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -171,8 +154,6 @@ struct ContentView: View {
                             .font(.headline)
                             .foregroundStyle(AppTheme.ink)
                             .frame(width: 40, height: 40)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
                     }
                     .accessibilityLabel("設定")
                 }
@@ -191,46 +172,31 @@ struct ContentView: View {
         }
     }
 
-    private var heroSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("MY GOURMET")
-                        .font(.caption.bold())
-                        .tracking(1.8)
-                        .foregroundStyle(.white.opacity(0.72))
-                    Text("いま一番うまい店を、\n5つだけ残す。")
-                        .font(.system(size: 34, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineSpacing(2)
-                        .minimumScaleFactor(0.86)
-                }
+    private var topSummarySection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(selectedMainGenre?.name ?? "未設定")
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.softText)
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(selectedSubGenre?.name ?? "未設定") Best5")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
                 Spacer()
-                Image(systemName: "sparkles")
-                    .font(.title2.bold())
-                    .foregroundStyle(AppTheme.lemon)
-                    .padding(12)
-                    .background(.white.opacity(0.14))
-                    .clipShape(Circle())
+                Text("\(rankedCount)/5")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.softFill)
+                    .clipShape(Capsule())
             }
-
-            HStack(spacing: 10) {
-                MetricPill(value: "\(rankedCount)/5", label: "Best")
-                MetricPill(value: "\(archiveStores.count)", label: "Archive")
-                MetricPill(value: selectedSubGenre?.name ?? "未設定", label: selectedMainGenre?.name ?? "Genre")
-            }
+            Text("順位が低くなるほどコンパクトに表示されます。")
+                .font(.footnote)
+                .foregroundStyle(AppTheme.softText)
         }
-        .padding(22)
-        .background(AppTheme.heroGradient)
-        .overlay(alignment: .bottomTrailing) {
-            Text("Best5")
-                .font(.system(size: 56, weight: .black, design: .rounded))
-                .foregroundStyle(.white.opacity(0.08))
-                .padding(.trailing, 8)
-                .padding(.bottom, 4)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .shadow(color: AppTheme.coral.opacity(0.28), radius: 24, x: 0, y: 16)
+        .padding(.bottom, 4)
     }
 
     private var selectorSection: some View {
@@ -266,11 +232,11 @@ struct ContentView: View {
                             selectedSubGenreId = subGenre.id
                         } label: {
                             Text(subGenre.name)
-                                .font(.subheadline.weight(.bold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(selectedSubGenreId == subGenre.id ? .white : AppTheme.ink)
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(selectedSubGenreId == subGenre.id ? AnyShapeStyle(AppTheme.accentGradient) : AnyShapeStyle(.ultraThinMaterial))
+                                .padding(.vertical, 9)
+                                .background(selectedSubGenreId == subGenre.id ? AppTheme.ink : AppTheme.softFill)
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -283,20 +249,14 @@ struct ContentView: View {
     }
 
     private var bestSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitleView(
-                title: "\(selectedSubGenre?.name ?? "未設定") Best5",
-                subtitle: selectedMainGenre?.name ?? "未設定",
-                count: "\(rankedCount)/5"
-            )
-
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(bestRows) { row in
                 switch row {
                 case .store(let rank, let store):
                     Button {
                         detailSeed = StoreDetailSeed(id: store.id)
                     } label: {
-                        StoreCardView(store: store, rankLabel: "\(rank)位", style: .best)
+                        StoreCardView(store: store, rankLabel: "\(rank)位", rank: rank, style: .best)
                     }
                     .buttonStyle(.plain)
                 case .tbd(let rank):
@@ -309,10 +269,16 @@ struct ContentView: View {
                 }
             }
         }
+        .background(AppTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(AppTheme.hairline, lineWidth: 1)
+        }
     }
 
     private var archiveSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             SectionTitleView(title: "Archive", subtitle: "Best5外の記録", count: "\(archiveStores.count)")
 
             if archiveStores.isEmpty {
@@ -327,17 +293,25 @@ struct ContentView: View {
                 .padding(18)
                 .modernCard()
             } else {
-                ForEach(archiveStores) { store in
-                    Button {
-                        detailSeed = StoreDetailSeed(id: store.id)
-                    } label: {
-                        StoreCardView(
-                            store: store,
-                            rankLabel: store.previousRank.map { "元\($0)位" } ?? "未ランクイン",
-                            style: .archive
-                        )
+                VStack(spacing: 0) {
+                    ForEach(archiveStores) { store in
+                        Button {
+                            detailSeed = StoreDetailSeed(id: store.id)
+                        } label: {
+                            StoreCardView(
+                                store: store,
+                                rankLabel: store.previousRank.map { "元\($0)位" } ?? "未ランクイン",
+                                style: .archive
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                }
+                .background(AppTheme.card)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(AppTheme.hairline, lineWidth: 1)
                 }
             }
         }
@@ -381,29 +355,6 @@ struct ContentView: View {
     }
 }
 
-struct MetricPill: View {
-    let value: String
-    let label: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.headline.bold())
-                .lineLimit(1)
-            Text(label)
-                .font(.caption2.bold())
-                .foregroundStyle(.white.opacity(0.68))
-                .lineLimit(1)
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(.white.opacity(0.13))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
 struct SelectorChip: View {
     let title: String
     let icon: String
@@ -411,20 +362,21 @@ struct SelectorChip: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.subheadline.bold())
-                .foregroundStyle(AppTheme.coral)
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.ink)
             Text(title)
-                .font(.subheadline.bold())
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.ink)
                 .lineLimit(1)
             Image(systemName: "chevron.down")
-                .font(.caption.bold())
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(AppTheme.muted)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .modernCard(cornerRadius: 18)
+        .padding(.vertical, 12)
+        .background(AppTheme.softFill)
+        .clipShape(Capsule())
     }
 }
 
@@ -437,20 +389,19 @@ struct SectionTitleView: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(subtitle)
-                    .font(.caption.bold())
-                    .foregroundStyle(AppTheme.coral)
-                    .tracking(0.8)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.softText)
                 Text(title)
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.title3.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
             }
             Spacer()
             Text(count)
-                .font(.subheadline.bold())
-                .foregroundStyle(AppTheme.ink)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(AppTheme.lemon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(AppTheme.ink)
                 .clipShape(Capsule())
         }
     }
@@ -491,18 +442,66 @@ enum StoreCardStyle {
 struct StoreCardView: View {
     let store: Store
     let rankLabel: String
+    var rank: Int?
     var style: StoreCardStyle = .best
 
     private var imageSize: CGFloat {
-        switch style {
-        case .best: 92
-        case .archive: 72
-        case .compact: 62
+        guard style == .best else {
+            return style == .archive ? 58 : 54
+        }
+
+        switch rank {
+        case 1: return 112
+        case 2: return 94
+        case 3: return 82
+        default: return 64
         }
     }
 
     private var isFirstRank: Bool {
         rankLabel == "1位"
+    }
+
+    private var titleSize: CGFloat {
+        guard style == .best else {
+            return style == .archive ? 16 : 15
+        }
+
+        switch rank {
+        case 1: return 24
+        case 2: return 21
+        case 3: return 19
+        default: return 17
+        }
+    }
+
+    private var memoFont: Font {
+        guard style == .best else {
+            return .subheadline
+        }
+
+        switch rank {
+        case 1, 2: return .body
+        case 3: return .subheadline
+        default: return .footnote
+        }
+    }
+
+    private var rowPadding: CGFloat {
+        guard style == .best else {
+            return 12
+        }
+
+        switch rank {
+        case 1: return 18
+        case 2: return 16
+        case 3: return 14
+        default: return 12
+        }
+    }
+
+    private var verticalSpacing: CGFloat {
+        rank == 1 ? 8 : 5
     }
 
     var body: some View {
@@ -511,55 +510,60 @@ struct StoreCardView: View {
                 ThumbnailView(imageUrl: store.imageUrl, name: store.name, size: imageSize)
                 if style == .best {
                     Text(rankLabel)
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(isFirstRank ? AppTheme.accentGradient : LinearGradient(colors: [AppTheme.ink.opacity(0.86), AppTheme.ink.opacity(0.64)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(isFirstRank ? .white : AppTheme.ink)
+                        .padding(.horizontal, isFirstRank ? 10 : 8)
+                        .padding(.vertical, isFirstRank ? 6 : 4)
+                        .background(isFirstRank ? AppTheme.ink : AppTheme.card)
                         .clipShape(Capsule())
+                        .overlay {
+                            Capsule().stroke(isFirstRank ? AppTheme.ink : AppTheme.hairline, lineWidth: 1)
+                        }
                         .padding(6)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: verticalSpacing) {
                 HStack(spacing: 7) {
                     if style != .best {
                         Text(rankLabel)
-                            .font(.caption.bold())
-                            .foregroundStyle(style == .archive ? AppTheme.muted : AppTheme.coral)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppTheme.ink)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 5)
-                            .background(Color(.secondarySystemBackground))
+                            .background(AppTheme.softFill)
                             .clipShape(Capsule())
                     }
                     Text(store.area ?? "エリア未登録")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.muted)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.softText)
                         .lineLimit(1)
                 }
 
                 Text(store.name)
-                    .font(.system(size: style == .best ? 19 : 16, weight: .black, design: .rounded))
+                    .font(.system(size: titleSize, weight: isFirstRank ? .bold : .semibold))
                     .foregroundStyle(AppTheme.ink)
                     .lineLimit(1)
                 Text(store.memo ?? "メモ未登録")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.muted)
-                    .lineLimit(2)
+                    .font(memoFont)
+                    .foregroundStyle(AppTheme.softText)
+                    .lineLimit(rank == 1 ? 3 : 2)
             }
             Spacer(minLength: 0)
 
             if style == .best {
                 Image(systemName: "chevron.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(AppTheme.muted.opacity(0.65))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.muted.opacity(0.55))
             }
         }
-        .padding(style == .compact ? 10 : 14)
-        .modernCard(cornerRadius: style == .compact ? 18 : 24)
-        .overlay {
-            RoundedRectangle(cornerRadius: style == .compact ? 18 : 24, style: .continuous)
-                .stroke(isFirstRank ? AppTheme.hotPink.opacity(0.35) : Color.white.opacity(0.45), lineWidth: 1)
+        .padding(rowPadding)
+        .background(AppTheme.card)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppTheme.hairline)
+                .frame(height: 1)
+                .padding(.leading, style == .best ? imageSize + rowPadding + 14 : 0)
         }
         .opacity(style == .archive ? 0.9 : 1)
     }
@@ -571,33 +575,34 @@ struct TBDCardView: View {
     var body: some View {
         HStack(spacing: 14) {
             Text("\(rank)位")
-                .font(.headline.bold())
-                .foregroundStyle(AppTheme.coral)
-                .frame(width: 58, height: 58)
-                .background(AppTheme.coral.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(AppTheme.softText)
+                .frame(width: 56, height: 56)
+                .background(AppTheme.softFill)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("TBD")
-                    .font(.title3.bold())
+                    .font(.headline.weight(.semibold))
                     .foregroundStyle(AppTheme.ink)
                 Text("この順位に店舗を登録")
                     .font(.subheadline)
-                    .foregroundStyle(AppTheme.muted)
+                    .foregroundStyle(AppTheme.softText)
             }
             Spacer()
 
-            Image(systemName: "plus.circle.fill")
-                .font(.title2)
-                .foregroundStyle(AppTheme.coral)
+            Image(systemName: "plus")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
         }
-        .padding(14)
-        .background(.white.opacity(0.72))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AppTheme.coral.opacity(0.35), style: StrokeStyle(lineWidth: 1.3, dash: [7]))
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(12)
+        .background(AppTheme.card)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppTheme.hairline)
+                .frame(height: 1)
+                .padding(.leading, 82)
+        }
     }
 }
 
@@ -624,15 +629,15 @@ struct ThumbnailView: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: min(22, size / 3.5), style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: min(18, size / 4), style: .continuous))
     }
 
     private var placeholder: some View {
         ZStack {
-            LinearGradient(colors: [AppTheme.coral.opacity(0.18), AppTheme.cyan.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            AppTheme.softFill
             Image(systemName: "fork.knife")
-                .font(.title3.bold())
-                .foregroundStyle(AppTheme.coral)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(AppTheme.softText)
         }
     }
 }
@@ -716,7 +721,7 @@ struct StoreFormView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppBackgroundView())
-            .tint(AppTheme.coral)
+            .tint(AppTheme.ink)
             .navigationTitle(seed.store == nil ? "店舗を登録" : "店舗を編集")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -778,21 +783,21 @@ struct StoreDetailView: View {
                                 LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(store.rank.label)
-                                        .font(.caption.bold())
+                                        .font(.caption.weight(.bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
-                                        .background(AppTheme.accentGradient)
+                                        .background(AppTheme.ink)
                                         .clipShape(Capsule())
                                     Text(store.name)
-                                        .font(.system(size: 30, weight: .black, design: .rounded))
+                                        .font(.system(size: 30, weight: .bold))
                                         .foregroundStyle(.white)
                                         .lineLimit(2)
                                 }
                                 .padding(18)
                             }
                             .frame(height: 280)
-                            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                             VStack(alignment: .leading, spacing: 12) {
                                 detailRow("大ジャンル", dataStore.mainGenreName(for: store.mainGenreId))
@@ -864,8 +869,8 @@ struct StoreDetailView: View {
     private func detailRow(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption.bold())
-                .foregroundStyle(AppTheme.coral)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(AppTheme.softText)
             Text(value)
                 .font(.body)
                 .foregroundStyle(AppTheme.ink)
@@ -891,12 +896,12 @@ struct DetailHeroImage: View {
                             .scaledToFill()
                     default:
                         Rectangle()
-                            .fill(AppTheme.heroGradient)
+                            .fill(AppTheme.softFill)
                     }
                 }
             } else {
                 Rectangle()
-                    .fill(AppTheme.heroGradient)
+                    .fill(AppTheme.softFill)
             }
         }
         .accessibilityLabel(name)
@@ -975,7 +980,7 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
         }
         .background(AppBackgroundView())
-        .tint(AppTheme.coral)
+        .tint(AppTheme.ink)
         .navigationTitle("設定")
         .onAppear(perform: syncDrafts)
         .onChange(of: dataStore.sortedMainGenres) { _, _ in syncMainGenreDrafts() }
