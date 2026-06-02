@@ -14,6 +14,7 @@
 		7D2B7C8A2C7A4F5100010004 /* RankingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010014 /* RankingEngine.swift */; };
 		7D2B7C8A2C7A4F5100010005 /* GourmetDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010015 /* GourmetDataStore.swift */; };
 		7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010016 /* Views.swift */; };
+		7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		7D2B7C8A2C7A4F5100010015 /* GourmetDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GourmetDataStore.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010016 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStorage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +57,7 @@
 				7D2B7C8A2C7A4F5100010014 /* RankingEngine.swift */,
 				7D2B7C8A2C7A4F5100010015 /* GourmetDataStore.swift */,
 				7D2B7C8A2C7A4F5100010016 /* Views.swift */,
+				7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */,
 				7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */,
 			);
 			path = MyGourmetRanking;
@@ -144,6 +147,7 @@
 				7D2B7C8A2C7A4F5100010004 /* RankingEngine.swift in Sources */,
 				7D2B7C8A2C7A4F5100010005 /* GourmetDataStore.swift in Sources */,
 				7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */,
+				7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

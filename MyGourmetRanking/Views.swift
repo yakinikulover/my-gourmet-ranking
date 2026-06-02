@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UIKit
 
 enum AppTheme {
     static let background = Color.white
@@ -430,6 +432,35 @@ enum StoreCardStyle {
     case compact
 }
 
+enum StoreImageSource: Identifiable, Equatable {
+    case local(String)
+    case remote(String)
+
+    var id: String {
+        switch self {
+        case .local(let fileName): "local-\(fileName)"
+        case .remote(let url): "remote-\(url)"
+        }
+    }
+}
+
+extension Store {
+    var imageSources: [StoreImageSource] {
+        let localSources = (imageFileNames ?? []).map(StoreImageSource.local)
+        if !localSources.isEmpty {
+            return localSources
+        }
+        guard let imageUrl else {
+            return []
+        }
+        return [.remote(imageUrl)]
+    }
+
+    var primaryImageSource: StoreImageSource? {
+        imageSources.first
+    }
+}
+
 struct StoreCardView: View {
     let store: Store
     let rankLabel: String
@@ -441,16 +472,7 @@ struct StoreCardView: View {
             return style == .archive ? 58 : 54
         }
 
-        switch rank {
-        case 1: return 112
-        case 2: return 94
-        case 3: return 82
-        default: return 64
-        }
-    }
-
-    private var isFirstRank: Bool {
-        rankLabel == "1位"
+        return 76
     }
 
     private var titleSize: CGFloat {
@@ -458,12 +480,7 @@ struct StoreCardView: View {
             return style == .archive ? 16 : 15
         }
 
-        switch rank {
-        case 1: return 24
-        case 2: return 21
-        case 3: return 19
-        default: return 17
-        }
+        return 18
     }
 
     private var memoFont: Font {
@@ -471,11 +488,7 @@ struct StoreCardView: View {
             return .subheadline
         }
 
-        switch rank {
-        case 1, 2: return .body
-        case 3: return .subheadline
-        default: return .footnote
-        }
+        return .footnote
     }
 
     private var rowPadding: CGFloat {
@@ -483,48 +496,71 @@ struct StoreCardView: View {
             return 12
         }
 
-        switch rank {
-        case 1: return 18
-        case 2: return 16
-        case 3: return 14
-        default: return 12
-        }
+        return 14
     }
 
     private var verticalSpacing: CGFloat {
-        rank == 1 ? 8 : 5
+        5
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack(alignment: .topLeading) {
-                ThumbnailView(imageUrl: store.imageUrl, name: store.name, size: imageSize)
-                if style == .best {
-                    Text(rankLabel)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(isFirstRank ? .white : AppTheme.ink)
-                        .padding(.horizontal, isFirstRank ? 10 : 8)
-                        .padding(.vertical, isFirstRank ? 6 : 4)
-                        .background(isFirstRank ? AppTheme.ink : AppTheme.card)
-                        .clipShape(Capsule())
-                        .overlay {
-                            Capsule().stroke(isFirstRank ? AppTheme.ink : AppTheme.hairline, lineWidth: 1)
-                        }
-                        .padding(6)
-                }
+        Group {
+            if style == .best {
+                bestCardBody
+            } else {
+                compactCardBody
             }
+        }
+        .padding(rowPadding)
+        .background(AppTheme.card)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(AppTheme.hairline)
+                .frame(height: 1)
+                .padding(.leading, style == .best ? rowPadding : 0)
+        }
+        .opacity(style == .archive ? 0.9 : 1)
+    }
+
+    private var bestCardBody: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                rankBadge
+                Text(store.name)
+                    .font(.system(size: titleSize, weight: .semibold))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.muted.opacity(0.55))
+            }
+
+            HStack(alignment: .top, spacing: 14) {
+                ThumbnailView(source: store.primaryImageSource, name: store.name, size: imageSize)
+
+                VStack(alignment: .leading, spacing: verticalSpacing) {
+                    Text(store.area ?? "エリア未登録")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.softText)
+                        .lineLimit(1)
+                    Text(store.memo ?? "メモ未登録")
+                        .font(memoFont)
+                        .foregroundStyle(AppTheme.softText)
+                        .lineLimit(2, reservesSpace: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private var compactCardBody: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ThumbnailView(source: store.primaryImageSource, name: store.name, size: imageSize)
 
             VStack(alignment: .leading, spacing: verticalSpacing) {
                 HStack(spacing: 7) {
-                    if style != .best {
-                        Text(rankLabel)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(AppTheme.ink)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(AppTheme.softFill)
-                            .clipShape(Capsule())
-                    }
+                    rankBadge
                     Text(store.area ?? "エリア未登録")
                         .font(.caption)
                         .foregroundStyle(AppTheme.softText)
@@ -532,13 +568,13 @@ struct StoreCardView: View {
                 }
 
                 Text(store.name)
-                    .font(.system(size: titleSize, weight: isFirstRank ? .bold : .semibold))
+                    .font(.system(size: titleSize, weight: .semibold))
                     .foregroundStyle(AppTheme.ink)
                     .lineLimit(1)
                 Text(store.memo ?? "メモ未登録")
                     .font(memoFont)
                     .foregroundStyle(AppTheme.softText)
-                    .lineLimit(rank == 1 ? 3 : 2)
+                    .lineLimit(2)
             }
             Spacer(minLength: 0)
 
@@ -548,15 +584,21 @@ struct StoreCardView: View {
                     .foregroundStyle(AppTheme.muted.opacity(0.55))
             }
         }
-        .padding(rowPadding)
-        .background(AppTheme.card)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(AppTheme.hairline)
-                .frame(height: 1)
-                .padding(.leading, style == .best ? imageSize + rowPadding + 14 : 0)
+    }
+
+    private var rankBadge: some View {
+        Group {
+            if style == .best, let rank {
+                Text("\(rank)位")
+                    .font(.system(size: titleSize, weight: .semibold))
+                    .foregroundStyle(AppTheme.ink)
+                    .frame(width: 42, alignment: .leading)
+            } else {
+                Text(rankLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(AppTheme.softText)
+            }
         }
-        .opacity(style == .archive ? 0.9 : 1)
     }
 }
 
@@ -564,61 +606,56 @@ struct TBDCardView: View {
     let rank: Int
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text("\(rank)位")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(AppTheme.softText)
-                .frame(width: 56, height: 56)
-                .background(AppTheme.softFill)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("TBD")
-                    .font(.headline.weight(.semibold))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                Text("\(rank)位")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(AppTheme.ink)
-                Text("この順位に店舗を登録")
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.softText)
+                    .frame(width: 42, alignment: .leading)
+                Text("TBD")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                Image(systemName: "plus")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(AppTheme.ink)
             }
-            Spacer()
 
-            Image(systemName: "plus")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(AppTheme.ink)
+            HStack(alignment: .top, spacing: 14) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(AppTheme.softFill)
+                    .frame(width: 76, height: 76)
+                    .overlay {
+                        Image(systemName: "fork.knife")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(AppTheme.softText)
+                    }
+
+                Text("この順位に店舗を登録")
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.softText)
+                    .lineLimit(2, reservesSpace: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .padding(12)
+        .padding(14)
         .background(AppTheme.card)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(AppTheme.hairline)
                 .frame(height: 1)
-                .padding(.leading, 82)
+                .padding(.leading, 14)
         }
     }
 }
 
 struct ThumbnailView: View {
-    let imageUrl: String?
+    let source: StoreImageSource?
     let name: String
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if let imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
+        StoreImageContent(source: source, name: name, placeholder: placeholder)
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: min(18, size / 4), style: .continuous))
     }
@@ -633,6 +670,85 @@ struct ThumbnailView: View {
     }
 }
 
+struct StoreImageContent<Placeholder: View>: View {
+    let source: StoreImageSource?
+    let name: String
+    let placeholder: Placeholder
+
+    var body: some View {
+        Group {
+            switch source {
+            case .local(let fileName):
+                if let image = ImageStorage.image(for: fileName) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    placeholder
+                }
+            case .remote(let imageUrl):
+                if let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        default:
+                            placeholder
+                        }
+                    }
+                } else {
+                    placeholder
+                }
+            case nil:
+                placeholder
+            }
+        }
+        .accessibilityLabel(name)
+    }
+}
+
+struct PhotoDraft: Identifiable, Equatable {
+    let id: String
+    let fileName: String?
+    let data: Data?
+
+    init(fileName: String) {
+        id = "file-\(fileName)"
+        self.fileName = fileName
+        data = nil
+    }
+
+    init(data: Data) {
+        id = "draft-\(UUID().uuidString)"
+        fileName = nil
+        self.data = data
+    }
+}
+
+struct PhotoDraftThumbnail: View {
+    let draft: PhotoDraft
+
+    var body: some View {
+        Group {
+            if let data = draft.data, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else if let fileName = draft.fileName, let image = ImageStorage.image(for: fileName) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                AppTheme.softFill
+            }
+        }
+        .frame(width: 82, height: 82)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
 struct StoreFormView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
     @Environment(\.dismiss) private var dismiss
@@ -643,7 +759,10 @@ struct StoreFormView: View {
     @State private var subGenreId: String
     @State private var rank: StoreRank
     @State private var area: String
-    @State private var imageUrl: String
+    @State private var legacyImageUrl: String
+    @State private var photoDrafts: [PhotoDraft]
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var isImportingPhotos = false
     @State private var memo: String
     @State private var mapUrl: String
     @State private var validationMessage: String?
@@ -655,7 +774,8 @@ struct StoreFormView: View {
         _subGenreId = State(initialValue: seed.store?.subGenreId ?? seed.subGenreId)
         _rank = State(initialValue: seed.store?.rank ?? seed.rank)
         _area = State(initialValue: seed.store?.area ?? "")
-        _imageUrl = State(initialValue: seed.store?.imageUrl ?? "")
+        _legacyImageUrl = State(initialValue: seed.store?.imageUrl ?? "")
+        _photoDrafts = State(initialValue: (seed.store?.imageFileNames ?? []).map(PhotoDraft.init(fileName:)))
         _memo = State(initialValue: seed.store?.memo ?? "")
         _mapUrl = State(initialValue: seed.store?.mapUrl ?? "")
     }
@@ -704,16 +824,70 @@ struct StoreFormView: View {
 
                 Section("店舗メモ") {
                     TextField("エリア", text: $area)
-                    TextField("サムネイル画像URL", text: $imageUrl, axis: .vertical)
                     TextField("Google Map URL", text: $mapUrl, axis: .vertical)
                     TextField("一言メモ", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
+                }
+
+                Section("写真") {
+                    PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 6, matching: .images) {
+                        Label(isImportingPhotos ? "読み込み中" : "カメラロールから写真を選択", systemImage: "photo.on.rectangle.angled")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .disabled(isImportingPhotos)
+
+                    if photoDrafts.isEmpty, !legacyImageUrl.isEmpty {
+                        HStack(spacing: 12) {
+                            ThumbnailView(source: .remote(legacyImageUrl), name: name.isEmpty ? "既存画像" : name, size: 72)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("既存のURL画像を使用中")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("写真を選ぶとカメラロール画像に置き換わります。")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.softText)
+                            }
+                        }
+                    }
+
+                    if !photoDrafts.isEmpty {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 10) {
+                                ForEach(photoDrafts) { draft in
+                                    ZStack(alignment: .topTrailing) {
+                                        PhotoDraftThumbnail(draft: draft)
+                                        Button {
+                                            photoDrafts.removeAll { $0.id == draft.id }
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(.white)
+                                                .frame(width: 24, height: 24)
+                                                .background(AppTheme.ink)
+                                                .clipShape(Circle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(5)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(AppBackgroundView())
             .tint(AppTheme.ink)
             .navigationTitle(seed.store == nil ? "店舗を登録" : "店舗を編集")
+            .onChange(of: selectedPhotoItems) { _, newItems in
+                guard !newItems.isEmpty else {
+                    return
+                }
+                Task {
+                    await importSelectedPhotos(newItems)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") { dismiss() }
@@ -736,6 +910,17 @@ struct StoreFormView: View {
             return
         }
 
+        let existingFileNames = photoDrafts.compactMap(\.fileName)
+        let newImageDataItems = photoDrafts.compactMap(\.data)
+        let savedFileNames: [String]
+        do {
+            savedFileNames = try ImageStorage.saveImages(newImageDataItems)
+        } catch {
+            validationMessage = "写真の保存に失敗しました。もう一度選択してください。"
+            return
+        }
+        let imageFileNames = existingFileNames + savedFileNames
+
         dataStore.saveStore(
             StoreFormData(
                 name: name,
@@ -744,12 +929,37 @@ struct StoreFormView: View {
                 rank: rank,
                 area: area,
                 memo: memo,
-                imageUrl: imageUrl,
+                imageUrl: imageFileNames.isEmpty ? legacyImageUrl : "",
+                imageFileNames: imageFileNames,
                 mapUrl: mapUrl
             ),
             editingStoreId: seed.store?.id
         )
         dismiss()
+    }
+
+    @MainActor
+    private func importSelectedPhotos(_ items: [PhotosPickerItem]) async {
+        isImportingPhotos = true
+        defer {
+            isImportingPhotos = false
+            selectedPhotoItems = []
+        }
+
+        var importedDrafts: [PhotoDraft] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                importedDrafts.append(PhotoDraft(data: data))
+            }
+        }
+
+        guard !importedDrafts.isEmpty else {
+            validationMessage = "写真を読み込めませんでした。別の写真を選んでください。"
+            return
+        }
+
+        legacyImageUrl = ""
+        photoDrafts.append(contentsOf: importedDrafts)
     }
 }
 
@@ -770,7 +980,7 @@ struct StoreDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
                             ZStack(alignment: .bottomLeading) {
-                                DetailHeroImage(imageUrl: store.imageUrl, name: store.name)
+                                DetailHeroImage(store: store)
                                 LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(store.rank.label)
@@ -873,29 +1083,33 @@ struct StoreDetailView: View {
 }
 
 struct DetailHeroImage: View {
-    let imageUrl: String?
-    let name: String
+    let store: Store
 
     var body: some View {
-        Group {
-            if let imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        Rectangle()
-                            .fill(AppTheme.softFill)
+        GeometryReader { proxy in
+            let sources = store.imageSources
+            if sources.count > 1 {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 10) {
+                        ForEach(sources) { source in
+                            StoreImageContent(source: source, name: store.name, placeholder: Rectangle().fill(AppTheme.softFill))
+                                .frame(width: proxy.size.width, height: proxy.size.height)
+                                .clipped()
+                        }
                     }
                 }
+                .scrollIndicators(.hidden)
+                .scrollTargetBehavior(.paging)
             } else {
-                Rectangle()
-                    .fill(AppTheme.softFill)
+                StoreImageContent(
+                    source: sources.first,
+                    name: store.name,
+                    placeholder: Rectangle().fill(AppTheme.softFill)
+                )
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .clipped()
             }
         }
-        .accessibilityLabel(name)
     }
 }
 

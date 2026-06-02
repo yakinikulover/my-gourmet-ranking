@@ -69,11 +69,16 @@ final class GourmetDataStore: ObservableObject {
             area: normalizedOptional(formData.area),
             memo: normalizedOptional(formData.memo),
             imageUrl: normalizedOptional(formData.imageUrl),
+            imageFileNames: formData.imageFileNames.isEmpty ? nil : formData.imageFileNames,
             mapUrl: normalizedOptional(formData.mapUrl),
             createdAt: existingStore?.createdAt ?? timestamp,
             updatedAt: timestamp
         )
+        let removedImageFileNames = (existingStore?.imageFileNames ?? []).filter { fileName in
+            !formData.imageFileNames.contains(fileName)
+        }
         stores = RankingEngine.upsertStore(stores: stores, incomingStore: store)
+        ImageStorage.deleteImages(removedImageFileNames)
     }
 
     func archiveStore(_ storeId: String) {
@@ -81,7 +86,9 @@ final class GourmetDataStore: ObservableObject {
     }
 
     func deleteStore(_ storeId: String) {
+        let imageFileNames = stores.first { $0.id == storeId }?.imageFileNames ?? []
         stores = RankingEngine.deleteStore(stores: stores, storeId: storeId)
+        ImageStorage.deleteImages(imageFileNames)
     }
 
     @discardableResult

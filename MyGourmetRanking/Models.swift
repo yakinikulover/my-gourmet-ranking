@@ -47,6 +47,7 @@ struct Store: Identifiable, Codable, Equatable {
     var area: String?
     var memo: String?
     var imageUrl: String?
+    var imageFileNames: [String]? = nil
     var mapUrl: String?
     var createdAt: Date
     var updatedAt: Date
@@ -77,6 +78,7 @@ struct StoreFormData {
     var area: String
     var memo: String
     var imageUrl: String
+    var imageFileNames: [String]
     var mapUrl: String
 }
 
