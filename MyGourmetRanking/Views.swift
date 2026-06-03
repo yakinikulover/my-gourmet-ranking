@@ -49,6 +49,7 @@ struct ContentView: View {
     @State private var selectedSubGenreId = ""
     @State private var formSeed: StoreFormSeed?
     @State private var detailSeed: StoreDetailSeed?
+    @State private var isGenrePickerPresented = false
 
     private var availableSubGenres: [SubGenre] {
         dataStore.subGenres(for: selectedMainGenreId)
@@ -155,41 +156,47 @@ struct ContentView: View {
                 StoreDetailView(storeId: seed.id)
                     .environmentObject(dataStore)
             }
+            .sheet(isPresented: $isGenrePickerPresented) {
+                GenrePickerSheet(
+                    selectedMainGenreId: $selectedMainGenreId,
+                    selectedSubGenreId: $selectedSubGenreId
+                )
+                .environmentObject(dataStore)
+                .presentationDetents([.medium, .large])
+            }
         }
     }
 
     private var selectorSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.softText)
-
-                Menu {
-                    ForEach(dataStore.sortedMainGenres) { genre in
-                        Button(genre.name) {
-                            selectedMainGenreId = genre.id
-                            selectedSubGenreId = preferredSubGenreId(for: genre.id)
-                        }
-                    }
+                Button {
+                    isGenrePickerPresented = true
                 } label: {
-                    FilterToken(title: selectedMainGenre?.name ?? "大ジャンル")
-                }
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.headline)
+                            .foregroundStyle(AppTheme.softText)
 
-                Rectangle()
-                    .fill(AppTheme.hairline)
-                    .frame(width: 1, height: 22)
-
-                Menu {
-                    ForEach(availableSubGenres) { subGenre in
-                        Button(subGenre.name) {
-                            selectedSubGenreId = subGenre.id
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(selectedSubGenre?.name ?? "ジャンルを選択")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.ink)
+                                .lineLimit(1)
+                            Text(selectedMainGenre?.name ?? "料理ジャンル")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(AppTheme.softText)
+                                .lineLimit(1)
                         }
+
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.muted)
                     }
-                } label: {
-                    FilterToken(title: selectedSubGenre?.name ?? "小ジャンル")
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .disabled(availableSubGenres.isEmpty)
+                .buttonStyle(.plain)
 
                 Spacer(minLength: 4)
 
@@ -370,6 +377,169 @@ struct FilterToken: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(AppTheme.muted)
         }
+    }
+}
+
+struct GenrePickerSheet: View {
+    @EnvironmentObject private var dataStore: GourmetDataStore
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedMainGenreId: String
+    @Binding var selectedSubGenreId: String
+    @State private var searchText = ""
+
+    private var normalizedQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var visibleMainGenres: [MainGenre] {
+        guard !normalizedQuery.isEmpty else {
+            return dataStore.sortedMainGenres
+        }
+
+        return dataStore.sortedMainGenres.filter { mainGenre in
+            mainGenre.name.lowercased().contains(normalizedQuery)
+                || dataStore.subGenres(for: mainGenre.id).contains {
+                    $0.name.lowercased().contains(normalizedQuery)
+                }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                searchField
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        mainGenreChips
+
+                        ForEach(visibleMainGenres) { mainGenre in
+                            let subGenres = visibleSubGenres(for: mainGenre)
+                            if !subGenres.isEmpty {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(mainGenre.name)
+                                        .font(.headline.weight(.bold))
+                                        .foregroundStyle(AppTheme.ink)
+                                        .padding(.horizontal, 2)
+
+                                    VStack(spacing: 0) {
+                                        ForEach(subGenres) { subGenre in
+                                            Button {
+                                                selectedMainGenreId = mainGenre.id
+                                                selectedSubGenreId = subGenre.id
+                                                dismiss()
+                                            } label: {
+                                                HStack(spacing: 12) {
+                                                    Text(subGenre.name)
+                                                        .font(.body.weight(.semibold))
+                                                        .foregroundStyle(AppTheme.ink)
+                                                    Spacer()
+                                                    if selectedMainGenreId == mainGenre.id && selectedSubGenreId == subGenre.id {
+                                                        Image(systemName: "checkmark")
+                                                            .font(.body.weight(.bold))
+                                                            .foregroundStyle(AppTheme.ink)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 13)
+                                                .contentShape(Rectangle())
+                                            }
+                                            .buttonStyle(.plain)
+
+                                            if subGenre.id != subGenres.last?.id {
+                                                Rectangle()
+                                                    .fill(AppTheme.hairline)
+                                                    .frame(height: 1)
+                                                    .padding(.leading, 14)
+                                            }
+                                        }
+                                    }
+                                    .background(AppTheme.card)
+                                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                            .stroke(AppTheme.hairline, lineWidth: 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(16)
+                }
+            }
+            .background(AppBackgroundView())
+            .navigationTitle("ジャンルを選択")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("閉じる") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .tint(AppTheme.ink)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.headline)
+                .foregroundStyle(AppTheme.softText)
+            TextField("定食、寿司、ラーメンなど", text: $searchText)
+                .textInputAutocapitalization(.never)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppTheme.softText)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(AppTheme.softFill)
+        .clipShape(Capsule())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private var mainGenreChips: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 10) {
+                ForEach(dataStore.sortedMainGenres) { mainGenre in
+                    Button {
+                        selectedMainGenreId = mainGenre.id
+                        selectedSubGenreId = dataStore.subGenres(for: mainGenre.id).first?.id ?? ""
+                        searchText = ""
+                    } label: {
+                        Text(mainGenre.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selectedMainGenreId == mainGenre.id ? .white : AppTheme.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(selectedMainGenreId == mainGenre.id ? AppTheme.ink : AppTheme.softFill)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func visibleSubGenres(for mainGenre: MainGenre) -> [SubGenre] {
+        let subGenres = dataStore.subGenres(for: mainGenre.id)
+        guard !normalizedQuery.isEmpty else {
+            return subGenres
+        }
+
+        if mainGenre.name.lowercased().contains(normalizedQuery) {
+            return subGenres
+        }
+        return subGenres.filter { $0.name.lowercased().contains(normalizedQuery) }
     }
 }
 
@@ -765,6 +935,7 @@ struct StoreFormView: View {
     @State private var isImportingPhotos = false
     @State private var memo: String
     @State private var mapUrl: String
+    @State private var selectedTagIds: Set<String>
     @State private var validationMessage: String?
 
     init(seed: StoreFormSeed) {
@@ -778,6 +949,7 @@ struct StoreFormView: View {
         _photoDrafts = State(initialValue: (seed.store?.imageFileNames ?? []).map(PhotoDraft.init(fileName:)))
         _memo = State(initialValue: seed.store?.memo ?? "")
         _mapUrl = State(initialValue: seed.store?.mapUrl ?? "")
+        _selectedTagIds = State(initialValue: Set(seed.store?.tagIds ?? []))
     }
 
     private var availableSubGenres: [SubGenre] {
@@ -827,6 +999,30 @@ struct StoreFormView: View {
                     TextField("Google Map URL", text: $mapUrl, axis: .vertical)
                     TextField("一言メモ", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
+                }
+
+                Section("用途タグ") {
+                    if dataStore.sortedOccasionTags.isEmpty {
+                        Text("設定画面で用途タグを追加できます。")
+                            .foregroundStyle(AppTheme.softText)
+                    } else {
+                        ForEach(dataStore.sortedOccasionTags) { tag in
+                            Button {
+                                toggleTag(tag.id)
+                            } label: {
+                                HStack {
+                                    Text(tag.name)
+                                        .foregroundStyle(AppTheme.ink)
+                                    Spacer()
+                                    if selectedTagIds.contains(tag.id) {
+                                        Image(systemName: "checkmark")
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(AppTheme.ink)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Section("写真") {
@@ -931,11 +1127,24 @@ struct StoreFormView: View {
                 memo: memo,
                 imageUrl: imageFileNames.isEmpty ? legacyImageUrl : "",
                 imageFileNames: imageFileNames,
-                mapUrl: mapUrl
+                mapUrl: mapUrl,
+                tagIds: orderedSelectedTagIds()
             ),
             editingStoreId: seed.store?.id
         )
         dismiss()
+    }
+
+    private func toggleTag(_ tagId: String) {
+        if selectedTagIds.contains(tagId) {
+            selectedTagIds.remove(tagId)
+        } else {
+            selectedTagIds.insert(tagId)
+        }
+    }
+
+    private func orderedSelectedTagIds() -> [String] {
+        dataStore.sortedOccasionTags.map(\.id).filter { selectedTagIds.contains($0) }
     }
 
     @MainActor
@@ -1006,6 +1215,7 @@ struct StoreDetailView: View {
                                 detailRow("現在順位", store.rank.label)
                                 detailRow("元順位", store.previousRank.map { "\($0)位" } ?? "未ランクイン")
                                 detailRow("エリア", store.area ?? "未登録")
+                                detailRow("用途タグ", tagText(for: store))
                                 detailRow("メモ", store.memo ?? "未登録")
 
                                 if let mapUrl = store.mapUrl, let url = URL(string: mapUrl) {
@@ -1080,6 +1290,11 @@ struct StoreDetailView: View {
         .padding(12)
         .modernCard(cornerRadius: 18)
     }
+
+    private func tagText(for store: Store) -> String {
+        let tagNames = dataStore.tagNames(for: store.tagIds)
+        return tagNames.isEmpty ? "未登録" : tagNames.joined(separator: " / ")
+    }
 }
 
 struct DetailHeroImage: View {
@@ -1117,6 +1332,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case stores = "登録データ編集"
     case mainGenres = "ジャンル編集"
     case subGenres = "種類編集"
+    case tags = "タグ編集"
 
     var id: String { rawValue }
 }
@@ -1131,6 +1347,7 @@ struct SettingsView: View {
     @State private var mainGenreFilter = ""
     @State private var subGenreFilter = ""
     @State private var rankFilter = ""
+    @State private var tagFilter = ""
 
     @State private var newMainGenreName = ""
     @State private var mainGenreDrafts: [String: String] = [:]
@@ -1138,6 +1355,9 @@ struct SettingsView: View {
     @State private var newSubGenreName = ""
     @State private var newSubGenreMainId = ""
     @State private var subGenreDrafts: [String: SubGenreDraft] = [:]
+
+    @State private var newTagName = ""
+    @State private var tagDrafts: [String: String] = [:]
 
     private var filteredStores: [Store] {
         dataStore.stores.filter { store in
@@ -1150,7 +1370,8 @@ struct SettingsView: View {
             let matchesSubGenre = subGenreFilter.isEmpty || store.subGenreId == subGenreFilter
             let matchesRank = rankFilter.isEmpty
                 || (rankFilter == "archive" ? store.rank == .archive : store.rank.rawValue == rankFilter)
-            return matchesSearch && matchesMainGenre && matchesSubGenre && matchesRank
+            let matchesTag = tagFilter.isEmpty || (store.tagIds ?? []).contains(tagFilter)
+            return matchesSearch && matchesMainGenre && matchesSubGenre && matchesRank && matchesTag
         }
     }
 
@@ -1163,13 +1384,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("設定セクション", selection: $selectedTab) {
-                ForEach(SettingsTab.allCases) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding()
+            settingsTabBar
 
             List {
                 switch selectedTab {
@@ -1179,6 +1394,8 @@ struct SettingsView: View {
                     mainGenreSection
                 case .subGenres:
                     subGenreSection
+                case .tags:
+                    tagSection
                 }
             }
             .listStyle(.insetGrouped)
@@ -1190,6 +1407,7 @@ struct SettingsView: View {
         .onAppear(perform: syncDrafts)
         .onChange(of: dataStore.sortedMainGenres) { _, _ in syncMainGenreDrafts() }
         .onChange(of: dataStore.sortedSubGenres) { _, _ in syncSubGenreDrafts() }
+        .onChange(of: dataStore.sortedOccasionTags) { _, _ in syncTagDrafts() }
         .sheet(item: $formSeed) { seed in
             StoreFormView(seed: seed)
                 .environmentObject(dataStore)
@@ -1197,6 +1415,30 @@ struct SettingsView: View {
         .alert(item: $message) { message in
             Alert(title: Text(message.title), message: Text(message.body), dismissButton: .default(Text("OK")))
         }
+    }
+
+    private var settingsTabBar: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 10) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        Text(tab.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(selectedTab == tab ? .white : AppTheme.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(selectedTab == tab ? AppTheme.ink : AppTheme.softFill)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .scrollIndicators(.hidden)
     }
 
     private var registeredStoreSection: some View {
@@ -1227,6 +1469,13 @@ struct SettingsView: View {
                     Text("すべて").tag("")
                     ForEach(StoreRank.allCases) { rank in
                         Text(rank.label).tag(rank.rawValue)
+                    }
+                }
+
+                Picker("用途タグ", selection: $tagFilter) {
+                    Text("すべて").tag("")
+                    ForEach(dataStore.sortedOccasionTags) { tag in
+                        Text(tag.name).tag(tag.id)
                     }
                 }
             }
@@ -1375,9 +1624,62 @@ struct SettingsView: View {
         }
     }
 
+    private var tagSection: some View {
+        Group {
+            Section("用途タグ追加") {
+                TextField("タグ名", text: $newTagName)
+                Button("追加") {
+                    if let error = dataStore.addOccasionTag(name: newTagName) {
+                        showError(error)
+                    } else {
+                        newTagName = ""
+                    }
+                }
+            }
+
+            Section("用途タグ一覧") {
+                if dataStore.sortedOccasionTags.isEmpty {
+                    Text("用途タグはまだありません。")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(Array(dataStore.sortedOccasionTags.enumerated()), id: \.element.id) { index, tag in
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("タグ名", text: bindingForTag(id: tag.id, fallback: tag.name))
+                            HStack {
+                                Button("保存") {
+                                    if let error = dataStore.updateOccasionTag(
+                                        id: tag.id,
+                                        name: tagDrafts[tag.id] ?? tag.name
+                                    ) {
+                                        showError(error)
+                                    }
+                                }
+                                Button("上へ") {
+                                    dataStore.moveOccasionTag(id: tag.id, direction: .up)
+                                }
+                                .disabled(index == 0)
+                                Button("下へ") {
+                                    dataStore.moveOccasionTag(id: tag.id, direction: .down)
+                                }
+                                .disabled(index == dataStore.sortedOccasionTags.count - 1)
+                                Spacer()
+                                Button("削除", role: .destructive) {
+                                    dataStore.deleteOccasionTag(id: tag.id)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    }
+
     private func syncDrafts() {
         syncMainGenreDrafts()
         syncSubGenreDrafts()
+        syncTagDrafts()
         if newSubGenreMainId.isEmpty {
             newSubGenreMainId = dataStore.sortedMainGenres.first?.id ?? ""
         }
@@ -1395,6 +1697,13 @@ struct SettingsView: View {
         )
         if !dataStore.sortedMainGenres.contains(where: { $0.id == newSubGenreMainId }) {
             newSubGenreMainId = dataStore.sortedMainGenres.first?.id ?? ""
+        }
+    }
+
+    private func syncTagDrafts() {
+        tagDrafts = Dictionary(uniqueKeysWithValues: dataStore.sortedOccasionTags.map { ($0.id, $0.name) })
+        if !dataStore.sortedOccasionTags.contains(where: { $0.id == tagFilter }) {
+            tagFilter = ""
         }
     }
 
@@ -1422,6 +1731,13 @@ struct SettingsView: View {
                 let current = subGenreDrafts[id] ?? SubGenreDraft(name: "", mainGenreId: fallback)
                 subGenreDrafts[id] = SubGenreDraft(name: current.name, mainGenreId: newValue)
             }
+        )
+    }
+
+    private func bindingForTag(id: String, fallback: String) -> Binding<String> {
+        Binding(
+            get: { tagDrafts[id] ?? fallback },
+            set: { tagDrafts[id] = $0 }
         )
     }
 
@@ -1455,6 +1771,13 @@ struct StoreSettingsRow: View {
             Text("\(dataStore.mainGenreName(for: store.mainGenreId)) / \(dataStore.subGenreName(for: store.subGenreId))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            let tagNames = dataStore.tagNames(for: store.tagIds)
+            if !tagNames.isEmpty {
+                Text(tagNames.joined(separator: " / "))
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.softText)
+            }
 
             HStack {
                 Button("編集", action: onEdit)

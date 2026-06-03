@@ -15,16 +15,24 @@ final class GourmetDataStore: ObservableObject {
         didSet { save(subGenres, key: StorageKey.subGenres) }
     }
 
+    @Published private(set) var occasionTags: [OccasionTag] {
+        didSet { save(occasionTags, key: StorageKey.occasionTags) }
+    }
+
     private enum StorageKey {
         static let stores = "my-gourmet-ranking.stores"
         static let mainGenres = "my-gourmet-ranking.main-genres"
         static let subGenres = "my-gourmet-ranking.sub-genres"
+        static let occasionTags = "my-gourmet-ranking.occasion-tags"
+        static let taxonomyVersion = "my-gourmet-ranking.taxonomy-version"
     }
 
     init() {
         stores = Self.load([Store].self, key: StorageKey.stores) ?? InitialGenres.sampleStores
         mainGenres = Self.load([MainGenre].self, key: StorageKey.mainGenres) ?? InitialGenres.mainGenres
         subGenres = Self.load([SubGenre].self, key: StorageKey.subGenres) ?? InitialGenres.subGenres
+        occasionTags = Self.load([OccasionTag].self, key: StorageKey.occasionTags) ?? InitialGenres.occasionTags
+        migrateTaxonomyIfNeeded()
     }
 
     var sortedMainGenres: [MainGenre] {
@@ -44,6 +52,12 @@ final class GourmetDataStore: ObservableObject {
         }
     }
 
+    var sortedOccasionTags: [OccasionTag] {
+        occasionTags.sorted { lhs, rhs in
+            lhs.sortOrder == rhs.sortOrder ? lhs.name < rhs.name : lhs.sortOrder < rhs.sortOrder
+        }
+    }
+
     func subGenres(for mainGenreId: String) -> [SubGenre] {
         sortedSubGenres.filter { $0.mainGenreId == mainGenreId }
     }
@@ -54,6 +68,17 @@ final class GourmetDataStore: ObservableObject {
 
     func subGenreName(for id: String) -> String {
         subGenres.first { $0.id == id }?.name ?? "未設定"
+    }
+
+    func tagNames(for tagIds: [String]?) -> [String] {
+        guard let tagIds, !tagIds.isEmpty else {
+            return []
+        }
+        let order = Dictionary(uniqueKeysWithValues: sortedOccasionTags.enumerated().map { ($0.element.id, $0.offset) })
+        let tagsById = Dictionary(uniqueKeysWithValues: occasionTags.map { ($0.id, $0.name) })
+        return tagIds
+            .sorted { (order[$0] ?? Int.max) < (order[$1] ?? Int.max) }
+            .compactMap { tagsById[$0] }
     }
 
     func saveStore(_ formData: StoreFormData, editingStoreId: String? = nil) {
@@ -71,6 +96,7 @@ final class GourmetDataStore: ObservableObject {
             imageUrl: normalizedOptional(formData.imageUrl),
             imageFileNames: formData.imageFileNames.isEmpty ? nil : formData.imageFileNames,
             mapUrl: normalizedOptional(formData.mapUrl),
+            tagIds: formData.tagIds.isEmpty ? nil : formData.tagIds,
             createdAt: existingStore?.createdAt ?? timestamp,
             updatedAt: timestamp
         )
@@ -238,6 +264,199 @@ final class GourmetDataStore: ObservableObject {
         subGenres = subGenres.map { swappedById[$0.id] ?? $0 }
     }
 
+    @discardableResult
+    func addOccasionTag(name: String) -> String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return "タグ名を入力してください。"
+        }
+
+        let timestamp = Date()
+        let nextSortOrder = (occasionTags.map(\.sortOrder).max() ?? -1) + 1
+        occasionTags.append(
+            OccasionTag(
+                id: "tag-\(UUID().uuidString)",
+                name: trimmedName,
+                sortOrder: nextSortOrder,
+                createdAt: timestamp,
+                updatedAt: timestamp
+            )
+        )
+        return nil
+    }
+
+    @discardableResult
+    func updateOccasionTag(id: String, name: String) -> String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            return "タグ名を入力してください。"
+        }
+
+        let timestamp = Date()
+        occasionTags = occasionTags.map { tag in
+            guard tag.id == id else {
+                return tag
+            }
+            var updatedTag = tag
+            updatedTag.name = trimmedName
+            updatedTag.updatedAt = timestamp
+            return updatedTag
+        }
+        return nil
+    }
+
+    func deleteOccasionTag(id: String) {
+        occasionTags.removeAll { $0.id == id }
+        stores = stores.map { store in
+            var updatedStore = store
+            let remainingTagIds = (store.tagIds ?? []).filter { $0 != id }
+            updatedStore.tagIds = remainingTagIds.nilIfEmpty
+            return updatedStore
+        }
+    }
+
+    func moveOccasionTag(id: String, direction: MoveDirection) {
+        occasionTags = swappedSortOrder(items: occasionTags, id: id, direction: direction)
+    }
+
+    private func migrateTaxonomyIfNeeded() {
+        let currentVersion = UserDefaults.standard.integer(forKey: StorageKey.taxonomyVersion)
+        guard currentVersion < 2 else {
+            return
+        }
+
+        let timestamp = Date()
+        let legacyOccasionNames = subGenres
+            .filter { $0.mainGenreId == "occasion" && $0.name != "全般" }
+            .map(\.name)
+        let legacySubGenreMoves: [String: (mainGenreId: String, subGenreId: String)] = [
+            "japanese-2": ("sushi-seafood", "sushi-seafood-2"),
+            "japanese-3": ("sushi-seafood", "sushi-seafood-4"),
+            "japanese-4": ("japanese", "japanese-5"),
+            "japanese-5": ("japanese", "japanese-4"),
+            "japanese-6": ("setmeal-don", "setmeal-don-8"),
+            "japanese-7": ("setmeal-don", "setmeal-don-10"),
+            "japanese-9": ("ramen", "ramen-10"),
+            "japanese-10": ("ramen", "ramen-11"),
+            "japanese-11": ("japanese", "japanese-3"),
+            "japanese-12": ("japanese", "japanese-7"),
+            "japanese-13": ("japanese", "japanese-6"),
+            "western-5": ("curry-ethnic", "curry-ethnic-2"),
+            "western-6": ("meat", "meat-6"),
+            "western-7": ("western", "western-6"),
+            "western-8": ("western", "western-7"),
+            "western-9": ("western", "western-8"),
+            "western-10": ("western", "western-9"),
+            "western-11": ("western", "western-10"),
+            "meat-6": ("yakitori-kushi", "yakitori-kushi-2"),
+            "meat-7": ("yakitori-kushi", "yakitori-kushi-3"),
+            "meat-8": ("meat", "meat-7"),
+            "ramen-2": ("ramen", "ramen-3"),
+            "ramen-3": ("ramen", "ramen-4"),
+            "ramen-4": ("ramen", "ramen-5"),
+            "ramen-5": ("ramen", "ramen-6"),
+            "ramen-6": ("ramen", "ramen-7"),
+            "ramen-7": ("ramen", "ramen-13"),
+            "fast-light-5": ("fast-light", "fast-light-7"),
+            "fast-light-6": ("fast-light", "fast-light-13"),
+            "fast-light-7": ("setmeal-don", "setmeal-don-12"),
+            "fast-light-8": ("setmeal-don", "setmeal-don-13"),
+            "fast-light-9": ("fast-light", "fast-light-5"),
+            "fast-light-10": ("fast-light", "fast-light-6"),
+            "konamono-2": ("fast-light", "fast-light-8"),
+            "konamono-3": ("fast-light", "fast-light-9"),
+            "konamono-4": ("fast-light", "fast-light-10"),
+            "konamono-5": ("ramen", "ramen-12"),
+            "konamono-6": ("fast-light", "fast-light-9"),
+            "curry-ethnic-5": ("curry-ethnic", "curry-ethnic-6"),
+            "curry-ethnic-6": ("curry-ethnic", "curry-ethnic-7"),
+            "curry-ethnic-7": ("curry-ethnic", "curry-ethnic-8")
+        ]
+
+        stores = stores.map { store in
+            guard let move = legacySubGenreMoves[store.subGenreId] else {
+                return store
+            }
+            var updatedStore = store
+            updatedStore.mainGenreId = move.mainGenreId
+            updatedStore.subGenreId = move.subGenreId
+            updatedStore.updatedAt = timestamp
+            return updatedStore
+        }
+
+        let storeMainGenreIds = Set(stores.map(\.mainGenreId))
+        let storeSubGenreIds = Set(stores.map(\.subGenreId))
+        var mergedMainGenres = mainGenres.filter { genre in
+            if genre.id == "occasion" || genre.id == "konamono" {
+                return storeMainGenreIds.contains(genre.id)
+            }
+            return true
+        }
+
+        for recommendedGenre in InitialGenres.mainGenres {
+            if let index = mergedMainGenres.firstIndex(where: { $0.id == recommendedGenre.id }) {
+                mergedMainGenres[index].name = recommendedGenre.name
+                mergedMainGenres[index].sortOrder = recommendedGenre.sortOrder
+                mergedMainGenres[index].updatedAt = timestamp
+            } else {
+                mergedMainGenres.append(recommendedGenre)
+            }
+        }
+        mainGenres = mergedMainGenres
+
+        var mergedSubGenres = subGenres.filter { subGenre in
+            if subGenre.mainGenreId == "occasion" || subGenre.mainGenreId == "konamono" {
+                return storeSubGenreIds.contains(subGenre.id)
+            }
+            return true
+        }
+
+        for recommendedSubGenre in InitialGenres.subGenres {
+            if let index = mergedSubGenres.firstIndex(where: { $0.id == recommendedSubGenre.id }) {
+                mergedSubGenres[index].mainGenreId = recommendedSubGenre.mainGenreId
+                mergedSubGenres[index].name = recommendedSubGenre.name
+                mergedSubGenres[index].sortOrder = recommendedSubGenre.sortOrder
+                mergedSubGenres[index].updatedAt = timestamp
+            } else {
+                mergedSubGenres.append(recommendedSubGenre)
+            }
+        }
+        subGenres = mergedSubGenres
+
+        let subGenreMainById = Dictionary(uniqueKeysWithValues: subGenres.map { ($0.id, $0.mainGenreId) })
+        stores = stores.map { store in
+            guard let mainGenreId = subGenreMainById[store.subGenreId], mainGenreId != store.mainGenreId else {
+                return store
+            }
+            var updatedStore = store
+            updatedStore.mainGenreId = mainGenreId
+            updatedStore.updatedAt = timestamp
+            return updatedStore
+        }
+
+        var mergedTags = occasionTags
+        for tag in InitialGenres.occasionTags {
+            if !mergedTags.contains(where: { $0.id == tag.id || $0.name == tag.name }) {
+                mergedTags.append(tag)
+            }
+        }
+        for legacyName in legacyOccasionNames where !mergedTags.contains(where: { $0.name == legacyName }) {
+            let nextSortOrder = (mergedTags.map(\.sortOrder).max() ?? -1) + 1
+            mergedTags.append(
+                OccasionTag(
+                    id: "tag-\(UUID().uuidString)",
+                    name: legacyName,
+                    sortOrder: nextSortOrder,
+                    createdAt: timestamp,
+                    updatedAt: timestamp
+                )
+            )
+        }
+        occasionTags = mergedTags
+
+        UserDefaults.standard.set(2, forKey: StorageKey.taxonomyVersion)
+    }
+
     private func normalizedOptional(_ value: String) -> String? {
         let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedValue.isEmpty ? nil : trimmedValue
@@ -306,3 +525,10 @@ protocol SortableGenre {
 
 extension MainGenre: SortableGenre {}
 extension SubGenre: SortableGenre {}
+extension OccasionTag: SortableGenre {}
+
+private extension Array {
+    var nilIfEmpty: [Element]? {
+        isEmpty ? nil : self
+    }
+}
