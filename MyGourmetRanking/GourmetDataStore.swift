@@ -15,15 +15,10 @@ final class GourmetDataStore: ObservableObject {
         didSet { save(subGenres, key: StorageKey.subGenres) }
     }
 
-    @Published private(set) var occasionTags: [OccasionTag] {
-        didSet { save(occasionTags, key: StorageKey.occasionTags) }
-    }
-
     private enum StorageKey {
         static let stores = "my-gourmet-ranking.stores"
         static let mainGenres = "my-gourmet-ranking.main-genres"
         static let subGenres = "my-gourmet-ranking.sub-genres"
-        static let occasionTags = "my-gourmet-ranking.occasion-tags"
         static let taxonomyVersion = "my-gourmet-ranking.taxonomy-version"
     }
 
@@ -31,7 +26,6 @@ final class GourmetDataStore: ObservableObject {
         stores = Self.load([Store].self, key: StorageKey.stores) ?? InitialGenres.sampleStores
         mainGenres = Self.load([MainGenre].self, key: StorageKey.mainGenres) ?? InitialGenres.mainGenres
         subGenres = Self.load([SubGenre].self, key: StorageKey.subGenres) ?? InitialGenres.subGenres
-        occasionTags = Self.load([OccasionTag].self, key: StorageKey.occasionTags) ?? InitialGenres.occasionTags
         migrateTaxonomyIfNeeded()
     }
 
@@ -52,12 +46,6 @@ final class GourmetDataStore: ObservableObject {
         }
     }
 
-    var sortedOccasionTags: [OccasionTag] {
-        occasionTags.sorted { lhs, rhs in
-            lhs.sortOrder == rhs.sortOrder ? lhs.name < rhs.name : lhs.sortOrder < rhs.sortOrder
-        }
-    }
-
     func subGenres(for mainGenreId: String) -> [SubGenre] {
         sortedSubGenres.filter { $0.mainGenreId == mainGenreId }
     }
@@ -68,17 +56,6 @@ final class GourmetDataStore: ObservableObject {
 
     func subGenreName(for id: String) -> String {
         subGenres.first { $0.id == id }?.name ?? "未設定"
-    }
-
-    func tagNames(for tagIds: [String]?) -> [String] {
-        guard let tagIds, !tagIds.isEmpty else {
-            return []
-        }
-        let order = Dictionary(uniqueKeysWithValues: sortedOccasionTags.enumerated().map { ($0.element.id, $0.offset) })
-        let tagsById = Dictionary(uniqueKeysWithValues: occasionTags.map { ($0.id, $0.name) })
-        return tagIds
-            .sorted { (order[$0] ?? Int.max) < (order[$1] ?? Int.max) }
-            .compactMap { tagsById[$0] }
     }
 
     func saveStore(_ formData: StoreFormData, editingStoreId: String? = nil) {
@@ -96,7 +73,6 @@ final class GourmetDataStore: ObservableObject {
             imageUrl: normalizedOptional(formData.imageUrl),
             imageFileNames: formData.imageFileNames.isEmpty ? nil : formData.imageFileNames,
             mapUrl: normalizedOptional(formData.mapUrl),
-            tagIds: formData.tagIds.isEmpty ? nil : formData.tagIds,
             createdAt: existingStore?.createdAt ?? timestamp,
             updatedAt: timestamp
         )
@@ -264,61 +240,6 @@ final class GourmetDataStore: ObservableObject {
         subGenres = subGenres.map { swappedById[$0.id] ?? $0 }
     }
 
-    @discardableResult
-    func addOccasionTag(name: String) -> String? {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else {
-            return "タグ名を入力してください。"
-        }
-
-        let timestamp = Date()
-        let nextSortOrder = (occasionTags.map(\.sortOrder).max() ?? -1) + 1
-        occasionTags.append(
-            OccasionTag(
-                id: "tag-\(UUID().uuidString)",
-                name: trimmedName,
-                sortOrder: nextSortOrder,
-                createdAt: timestamp,
-                updatedAt: timestamp
-            )
-        )
-        return nil
-    }
-
-    @discardableResult
-    func updateOccasionTag(id: String, name: String) -> String? {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else {
-            return "タグ名を入力してください。"
-        }
-
-        let timestamp = Date()
-        occasionTags = occasionTags.map { tag in
-            guard tag.id == id else {
-                return tag
-            }
-            var updatedTag = tag
-            updatedTag.name = trimmedName
-            updatedTag.updatedAt = timestamp
-            return updatedTag
-        }
-        return nil
-    }
-
-    func deleteOccasionTag(id: String) {
-        occasionTags.removeAll { $0.id == id }
-        stores = stores.map { store in
-            var updatedStore = store
-            let remainingTagIds = (store.tagIds ?? []).filter { $0 != id }
-            updatedStore.tagIds = remainingTagIds.nilIfEmpty
-            return updatedStore
-        }
-    }
-
-    func moveOccasionTag(id: String, direction: MoveDirection) {
-        occasionTags = swappedSortOrder(items: occasionTags, id: id, direction: direction)
-    }
-
     private func migrateTaxonomyIfNeeded() {
         let currentVersion = UserDefaults.standard.integer(forKey: StorageKey.taxonomyVersion)
         guard currentVersion < 2 else {
@@ -326,9 +247,6 @@ final class GourmetDataStore: ObservableObject {
         }
 
         let timestamp = Date()
-        let legacyOccasionNames = subGenres
-            .filter { $0.mainGenreId == "occasion" && $0.name != "全般" }
-            .map(\.name)
         let legacySubGenreMoves: [String: (mainGenreId: String, subGenreId: String)] = [
             "japanese-2": ("sushi-seafood", "sushi-seafood-2"),
             "japanese-3": ("sushi-seafood", "sushi-seafood-4"),
@@ -434,26 +352,6 @@ final class GourmetDataStore: ObservableObject {
             return updatedStore
         }
 
-        var mergedTags = occasionTags
-        for tag in InitialGenres.occasionTags {
-            if !mergedTags.contains(where: { $0.id == tag.id || $0.name == tag.name }) {
-                mergedTags.append(tag)
-            }
-        }
-        for legacyName in legacyOccasionNames where !mergedTags.contains(where: { $0.name == legacyName }) {
-            let nextSortOrder = (mergedTags.map(\.sortOrder).max() ?? -1) + 1
-            mergedTags.append(
-                OccasionTag(
-                    id: "tag-\(UUID().uuidString)",
-                    name: legacyName,
-                    sortOrder: nextSortOrder,
-                    createdAt: timestamp,
-                    updatedAt: timestamp
-                )
-            )
-        }
-        occasionTags = mergedTags
-
         UserDefaults.standard.set(2, forKey: StorageKey.taxonomyVersion)
     }
 
@@ -525,10 +423,3 @@ protocol SortableGenre {
 
 extension MainGenre: SortableGenre {}
 extension SubGenre: SortableGenre {}
-extension OccasionTag: SortableGenre {}
-
-private extension Array {
-    var nilIfEmpty: [Element]? {
-        isEmpty ? nil : self
-    }
-}

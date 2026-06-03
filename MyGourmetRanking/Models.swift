@@ -49,7 +49,6 @@ struct Store: Identifiable, Codable, Equatable {
     var imageUrl: String?
     var imageFileNames: [String]? = nil
     var mapUrl: String?
-    var tagIds: [String]? = nil
     var createdAt: Date
     var updatedAt: Date
 }
@@ -71,14 +70,6 @@ struct SubGenre: Identifiable, Codable, Equatable {
     var updatedAt: Date
 }
 
-struct OccasionTag: Identifiable, Codable, Equatable {
-    var id: String
-    var name: String
-    var sortOrder: Int
-    var createdAt: Date
-    var updatedAt: Date
-}
-
 struct StoreFormData {
     var name: String
     var mainGenreId: String
@@ -89,7 +80,6 @@ struct StoreFormData {
     var imageUrl: String
     var imageFileNames: [String]
     var mapUrl: String
-    var tagIds: [String]
 }
 
 enum BestRankRow: Identifiable {

@@ -156,19 +156,6 @@ enum InitialGenres {
         ])
     ]
 
-    static let occasionTags: [OccasionTag] = [
-        occasionTag(id: "tag-lunch", name: "ランチ", sortOrder: 0),
-        occasionTag(id: "tag-solo", name: "ひとり飯", sortOrder: 1),
-        occasionTag(id: "tag-date", name: "デート", sortOrder: 2),
-        occasionTag(id: "tag-friends", name: "友達と行く", sortOrder: 3),
-        occasionTag(id: "tag-business", name: "会食", sortOrder: 4),
-        occasionTag(id: "tag-anniversary", name: "記念日", sortOrder: 5),
-        occasionTag(id: "tag-cost", name: "コスパ", sortOrder: 6),
-        occasionTag(id: "tag-late-night", name: "深夜飯", sortOrder: 7),
-        occasionTag(id: "tag-after-sauna", name: "サウナ後", sortOrder: 8),
-        occasionTag(id: "tag-recommend", name: "人に紹介したい", sortOrder: 9)
-    ]
-
     static let mainGenres: [MainGenre] = seeds.enumerated().map { index, seed in
         MainGenre(
             id: seed.id,
@@ -202,8 +189,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "銀座",
             memo: "割下の香りが強くて、卵まで主役になる一皿。",
-            imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-date", "tag-recommend"]
+            imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sukiyaki-2",
@@ -214,8 +200,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "浅草",
             memo: "落ち着いた店内。甘めの味付けで友達にも紹介しやすい。",
-            imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-friends", "tag-recommend"]
+            imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sukiyaki-3",
@@ -226,8 +211,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "恵比寿",
             memo: "少し今っぽい雰囲気。デート用途ならかなり強い。",
-            imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-date", "tag-anniversary"]
+            imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sukiyaki-5",
@@ -238,8 +222,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "日本橋",
             memo: "ランチの満足度が高い。4位はあえてTBDにして比較用。",
-            imageUrl: "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-lunch", "tag-cost"]
+            imageUrl: "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sukiyaki-archive-1",
@@ -250,8 +233,7 @@ enum InitialGenres {
             previousRank: 4,
             area: "神楽坂",
             memo: "前は4位。おいしいけど再訪優先度は少し下がった。",
-            imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-business"]
+            imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sukiyaki-archive-2",
@@ -262,8 +244,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "渋谷",
             memo: "未ランクイン。深夜に使えるけどBest入りは保留。",
-            imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-late-night"]
+            imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-sushi-1",
@@ -274,8 +255,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "青山",
             memo: "小ぶりでテンポが良い。ひとりでも入りやすい鮨。",
-            imageUrl: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-solo"]
+            imageUrl: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-ramen-1",
@@ -286,8 +266,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "代々木",
             memo: "魚介の余韻が長い。並んでも許せる完成度。",
-            imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-solo"]
+            imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-cafe-1",
@@ -298,8 +277,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "表参道",
             memo: "席間が広くて作業しやすい。ラテもちゃんとうまい。",
-            imageUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-lunch", "tag-solo"]
+            imageUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=80"
         ),
         sampleStore(
             id: "sample-burger-1",
@@ -310,8 +288,7 @@ enum InitialGenres {
             previousRank: nil,
             area: "中目黒",
             memo: "肉感強め。ポテトまでちゃんと覚えている店。",
-            imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80",
-            tagIds: ["tag-friends"]
+            imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80"
         )
     ]
 
@@ -324,8 +301,7 @@ enum InitialGenres {
         previousRank: Int?,
         area: String,
         memo: String,
-        imageUrl: String,
-        tagIds: [String] = []
+        imageUrl: String
     ) -> Store {
         Store(
             id: id,
@@ -338,17 +314,6 @@ enum InitialGenres {
             memo: memo,
             imageUrl: imageUrl,
             mapUrl: "https://maps.google.com/?q=\(area.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? area)",
-            tagIds: tagIds.isEmpty ? nil : tagIds,
-            createdAt: timestamp,
-            updatedAt: timestamp
-        )
-    }
-
-    private static func occasionTag(id: String, name: String, sortOrder: Int) -> OccasionTag {
-        OccasionTag(
-            id: id,
-            name: name,
-            sortOrder: sortOrder,
             createdAt: timestamp,
             updatedAt: timestamp
         )
