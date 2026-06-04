@@ -391,17 +391,15 @@ struct GenrePickerSheet: View {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
+    private var selectedMainGenre: MainGenre? {
+        dataStore.sortedMainGenres.first { $0.id == selectedMainGenreId }
+    }
+
     private var visibleMainGenres: [MainGenre] {
-        guard !normalizedQuery.isEmpty else {
+        guard let selectedMainGenre else {
             return dataStore.sortedMainGenres
         }
-
-        return dataStore.sortedMainGenres.filter { mainGenre in
-            mainGenre.name.lowercased().contains(normalizedQuery)
-                || dataStore.subGenres(for: mainGenre.id).contains {
-                    $0.name.lowercased().contains(normalizedQuery)
-                }
-        }
+        return [selectedMainGenre]
     }
 
     var body: some View {
@@ -413,55 +411,69 @@ struct GenrePickerSheet: View {
                     VStack(alignment: .leading, spacing: 18) {
                         mainGenreChips
 
-                        ForEach(visibleMainGenres) { mainGenre in
-                            let subGenres = visibleSubGenres(for: mainGenre)
-                            if !subGenres.isEmpty {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text(mainGenre.name)
-                                        .font(.headline.weight(.bold))
-                                        .foregroundStyle(AppTheme.ink)
-                                        .padding(.horizontal, 2)
+                        let hasVisibleSubGenres = visibleMainGenres.contains { mainGenre in
+                            !visibleSubGenres(for: mainGenre).isEmpty
+                        }
 
-                                    VStack(spacing: 0) {
-                                        ForEach(subGenres) { subGenre in
-                                            Button {
-                                                selectedMainGenreId = mainGenre.id
-                                                selectedSubGenreId = subGenre.id
-                                                dismiss()
-                                            } label: {
-                                                HStack(spacing: 12) {
-                                                    Text(subGenre.name)
-                                                        .font(.body.weight(.semibold))
-                                                        .foregroundStyle(AppTheme.ink)
-                                                    Spacer()
-                                                    if selectedMainGenreId == mainGenre.id && selectedSubGenreId == subGenre.id {
-                                                        Image(systemName: "checkmark")
-                                                            .font(.body.weight(.bold))
+                        if hasVisibleSubGenres {
+                            ForEach(visibleMainGenres) { mainGenre in
+                                let subGenres = visibleSubGenres(for: mainGenre)
+                                if !subGenres.isEmpty {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(mainGenre.name)
+                                            .font(.headline.weight(.bold))
+                                            .foregroundStyle(AppTheme.ink)
+                                            .padding(.horizontal, 2)
+
+                                        VStack(spacing: 0) {
+                                            ForEach(subGenres) { subGenre in
+                                                Button {
+                                                    selectedMainGenreId = mainGenre.id
+                                                    selectedSubGenreId = subGenre.id
+                                                    dismiss()
+                                                } label: {
+                                                    HStack(spacing: 12) {
+                                                        Text(subGenre.name)
+                                                            .font(.body.weight(.semibold))
                                                             .foregroundStyle(AppTheme.ink)
+                                                        Spacer()
+                                                        if selectedMainGenreId == mainGenre.id && selectedSubGenreId == subGenre.id {
+                                                            Image(systemName: "checkmark")
+                                                                .font(.body.weight(.bold))
+                                                                .foregroundStyle(AppTheme.ink)
+                                                        }
                                                     }
+                                                    .padding(.horizontal, 14)
+                                                    .padding(.vertical, 13)
+                                                    .contentShape(Rectangle())
                                                 }
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 13)
-                                                .contentShape(Rectangle())
-                                            }
-                                            .buttonStyle(.plain)
+                                                .buttonStyle(.plain)
 
-                                            if subGenre.id != subGenres.last?.id {
-                                                Rectangle()
-                                                    .fill(AppTheme.hairline)
-                                                    .frame(height: 1)
-                                                    .padding(.leading, 14)
+                                                if subGenre.id != subGenres.last?.id {
+                                                    Rectangle()
+                                                        .fill(AppTheme.hairline)
+                                                        .frame(height: 1)
+                                                        .padding(.leading, 14)
+                                                }
                                             }
                                         }
-                                    }
-                                    .background(AppTheme.card)
-                                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                            .stroke(AppTheme.hairline, lineWidth: 1)
+                                        .background(AppTheme.card)
+                                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                                .stroke(AppTheme.hairline, lineWidth: 1)
+                                        }
                                     }
                                 }
                             }
+                        } else {
+                            ContentUnavailableView(
+                                "種類が見つかりません",
+                                systemImage: "magnifyingglass",
+                                description: Text("選択中のジャンル内で別のキーワードを試してください。")
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 28)
                         }
                     }
                     .padding(16)
@@ -536,9 +548,6 @@ struct GenrePickerSheet: View {
             return subGenres
         }
 
-        if mainGenre.name.lowercased().contains(normalizedQuery) {
-            return subGenres
-        }
         return subGenres.filter { $0.name.lowercased().contains(normalizedQuery) }
     }
 }
@@ -1298,27 +1307,29 @@ struct DetailHeroImage: View {
     var body: some View {
         GeometryReader { proxy in
             let sources = store.imageSources
-            if sources.count > 1 {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 10) {
-                        ForEach(sources) { source in
-                            StoreImageContent(source: source, name: store.name, placeholder: Rectangle().fill(AppTheme.softFill))
-                                .frame(width: proxy.size.width, height: proxy.size.height)
-                                .clipped()
-                        }
+            TabView {
+                if sources.isEmpty {
+                    StoreImageContent(
+                        source: nil,
+                        name: store.name,
+                        placeholder: Rectangle().fill(AppTheme.softFill)
+                    )
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                } else {
+                    ForEach(sources) { source in
+                        StoreImageContent(
+                            source: source,
+                            name: store.name,
+                            placeholder: Rectangle().fill(AppTheme.softFill)
+                        )
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
                     }
                 }
-                .scrollIndicators(.hidden)
-                .scrollTargetBehavior(.paging)
-            } else {
-                StoreImageContent(
-                    source: sources.first,
-                    name: store.name,
-                    placeholder: Rectangle().fill(AppTheme.softFill)
-                )
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
             }
+            .tabViewStyle(.page(indexDisplayMode: sources.count > 1 ? .automatic : .never))
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
     }
 }
