@@ -195,10 +195,9 @@ struct ContentView: View {
                             .foregroundStyle(AppTheme.muted)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Spacer(minLength: 4)
 
                 NavigationLink {
                     SettingsView()
