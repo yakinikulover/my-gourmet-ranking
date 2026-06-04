@@ -1199,6 +1199,7 @@ struct StoreDetailView: View {
                             ZStack(alignment: .bottomLeading) {
                                 DetailHeroImage(store: store)
                                 LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)
+                                    .allowsHitTesting(false)
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(store.rank.label)
                                         .font(.caption.weight(.bold))
@@ -1213,6 +1214,7 @@ struct StoreDetailView: View {
                                         .lineLimit(2)
                                 }
                                 .padding(18)
+                                .allowsHitTesting(false)
                             }
                             .frame(height: 280)
                             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -1302,33 +1304,57 @@ struct StoreDetailView: View {
 
 struct DetailHeroImage: View {
     let store: Store
+    @State private var selectedImageIndex = 0
 
     var body: some View {
         GeometryReader { proxy in
             let sources = store.imageSources
-            TabView {
-                if sources.isEmpty {
-                    StoreImageContent(
-                        source: nil,
-                        name: store.name,
-                        placeholder: Rectangle().fill(AppTheme.softFill)
-                    )
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-                } else {
-                    ForEach(sources) { source in
+            ZStack(alignment: .bottomTrailing) {
+                TabView(selection: $selectedImageIndex) {
+                    if sources.isEmpty {
                         StoreImageContent(
-                            source: source,
+                            source: nil,
                             name: store.name,
                             placeholder: Rectangle().fill(AppTheme.softFill)
                         )
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .clipped()
+                        .tag(0)
+                    } else {
+                        ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
+                            StoreImageContent(
+                                source: source,
+                                name: store.name,
+                                placeholder: Rectangle().fill(AppTheme.softFill)
+                            )
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                            .tag(index)
+                        }
                     }
                 }
+                .tabViewStyle(.page(indexDisplayMode: sources.count > 1 ? .automatic : .never))
+                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                .frame(width: proxy.size.width, height: proxy.size.height)
+
+                if sources.count > 1 {
+                    Text("\(selectedImageIndex + 1)/\(sources.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.68), in: Capsule())
+                        .padding(14)
+                        .allowsHitTesting(false)
+                }
             }
-            .tabViewStyle(.page(indexDisplayMode: sources.count > 1 ? .automatic : .never))
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .onChange(of: sources) { _, newSources in
+                guard selectedImageIndex >= newSources.count else {
+                    return
+                }
+                selectedImageIndex = max(newSources.count - 1, 0)
+            }
         }
     }
 }
