@@ -1431,10 +1431,17 @@ struct FullScreenPhotoViewer: View {
     let storeName: String
     @Binding var selectedImageIndex: Int
     @Environment(\.dismiss) private var dismiss
+    @State private var verticalDragOffset: CGFloat = 0
+
+    private var dragProgress: Double {
+        min(Double(verticalDragOffset / 360), 0.72)
+    }
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.black
+                .opacity(1 - dragProgress)
+                .ignoresSafeArea()
 
             TabView(selection: $selectedImageIndex) {
                 if sources.isEmpty {
@@ -1454,29 +1461,10 @@ struct FullScreenPhotoViewer: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .offset(y: verticalDragOffset)
             .ignoresSafeArea()
 
             VStack {
-                HStack {
-                    if sources.count > 1 {
-                        PhotoCountBadge(currentIndex: selectedImageIndex, count: sources.count)
-                    }
-                    Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 42, height: 42)
-                            .background(.black.opacity(0.46), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("閉じる")
-                }
-                .padding(.horizontal, 18)
-                .padding(.top, 14)
-
                 Spacer()
 
                 if sources.count > 1 {
@@ -1488,6 +1476,30 @@ struct FullScreenPhotoViewer: View {
                 }
             }
         }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 18)
+                .onChanged { value in
+                    let verticalMovement = value.translation.height
+                    let horizontalMovement = abs(value.translation.width)
+                    guard verticalMovement > 0, verticalMovement > horizontalMovement else {
+                        return
+                    }
+                    verticalDragOffset = verticalMovement
+                }
+                .onEnded { value in
+                    let verticalMovement = value.translation.height
+                    let horizontalMovement = abs(value.translation.width)
+                    let shouldDismiss = verticalMovement > 120 && verticalMovement > horizontalMovement * 1.2
+
+                    if shouldDismiss {
+                        dismiss()
+                    } else {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                            verticalDragOffset = 0
+                        }
+                    }
+                }
+        )
         .onAppear(perform: clampSelectedImageIndex)
         .onChange(of: sources) { _, _ in
             clampSelectedImageIndex()
