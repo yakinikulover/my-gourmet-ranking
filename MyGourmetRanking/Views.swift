@@ -1362,6 +1362,13 @@ struct DetailHeroImage: View {
                         .allowsHitTesting(false)
                 }
             }
+            .overlay(alignment: .topTrailing) {
+                if sources.count > 1 {
+                    PhotoCountBadge(currentIndex: selectedImageIndex, count: sources.count)
+                        .padding(14)
+                        .allowsHitTesting(false)
+                }
+            }
             .frame(width: proxy.size.width, height: proxy.size.height)
             .contentShape(Rectangle())
             .simultaneousGesture(
@@ -1405,6 +1412,20 @@ struct PhotoPageDots: View {
     }
 }
 
+struct PhotoCountBadge: View {
+    let currentIndex: Int
+    let count: Int
+
+    var body: some View {
+        Text("\(currentIndex + 1)/\(count)")
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.56), in: Capsule())
+    }
+}
+
 struct FullScreenPhotoViewer: View {
     let sources: [StoreImageSource]
     let storeName: String
@@ -1437,6 +1458,9 @@ struct FullScreenPhotoViewer: View {
 
             VStack {
                 HStack {
+                    if sources.count > 1 {
+                        PhotoCountBadge(currentIndex: selectedImageIndex, count: sources.count)
+                    }
                     Spacer()
                     Button {
                         dismiss()
