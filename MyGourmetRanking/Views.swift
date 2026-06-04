@@ -852,15 +852,26 @@ struct StoreImageContent<Placeholder: View>: View {
     let source: StoreImageSource?
     let name: String
     let placeholder: Placeholder
+    let contentMode: ContentMode
+
+    init(
+        source: StoreImageSource?,
+        name: String,
+        placeholder: Placeholder,
+        contentMode: ContentMode = .fill
+    ) {
+        self.source = source
+        self.name = name
+        self.placeholder = placeholder
+        self.contentMode = contentMode
+    }
 
     var body: some View {
         Group {
             switch source {
             case .local(let fileName):
                 if let image = ImageStorage.image(for: fileName) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
+                    configuredImage(Image(uiImage: image))
                 } else {
                     placeholder
                 }
@@ -869,9 +880,7 @@ struct StoreImageContent<Placeholder: View>: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
+                            configuredImage(image)
                         default:
                             placeholder
                         }
@@ -884,6 +893,13 @@ struct StoreImageContent<Placeholder: View>: View {
             }
         }
         .accessibilityLabel(name)
+    }
+
+    @ViewBuilder
+    private func configuredImage(_ image: Image) -> some View {
+        image
+            .resizable()
+            .aspectRatio(contentMode: contentMode)
     }
 }
 
@@ -1305,11 +1321,12 @@ struct StoreDetailView: View {
 struct DetailHeroImage: View {
     let store: Store
     @State private var selectedImageIndex = 0
+    @State private var isViewerPresented = false
 
     var body: some View {
         GeometryReader { proxy in
             let sources = store.imageSources
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .bottom) {
                 TabView(selection: $selectedImageIndex) {
                     if sources.isEmpty {
                         StoreImageContent(
@@ -1333,28 +1350,130 @@ struct DetailHeroImage: View {
                         }
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: sources.count > 1 ? .automatic : .never))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(width: proxy.size.width, height: proxy.size.height)
 
                 if sources.count > 1 {
-                    Text("\(selectedImageIndex + 1)/\(sources.count)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
+                    PhotoPageDots(count: sources.count, selectedIndex: selectedImageIndex)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.black.opacity(0.68), in: Capsule())
-                        .padding(14)
+                        .padding(.vertical, 8)
+                        .background(.black.opacity(0.36), in: Capsule())
+                        .padding(.bottom, 14)
                         .allowsHitTesting(false)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    guard !sources.isEmpty else {
+                        return
+                    }
+                    isViewerPresented = true
+                }
+            )
             .onChange(of: sources) { _, newSources in
                 guard selectedImageIndex >= newSources.count else {
                     return
                 }
                 selectedImageIndex = max(newSources.count - 1, 0)
             }
+            .fullScreenCover(isPresented: $isViewerPresented) {
+                FullScreenPhotoViewer(
+                    sources: sources,
+                    storeName: store.name,
+                    selectedImageIndex: $selectedImageIndex
+                )
+            }
+        }
+    }
+}
+
+struct PhotoPageDots: View {
+    let count: Int
+    let selectedIndex: Int
+
+    var body: some View {
+        HStack(spacing: 7) {
+            ForEach(0..<count, id: \.self) { index in
+                Circle()
+                    .fill(index == selectedIndex ? .white : .white.opacity(0.38))
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: selectedIndex)
+    }
+}
+
+struct FullScreenPhotoViewer: View {
+    let sources: [StoreImageSource]
+    let storeName: String
+    @Binding var selectedImageIndex: Int
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $selectedImageIndex) {
+                if sources.isEmpty {
+                    Color.black
+                        .tag(0)
+                } else {
+                    ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
+                        StoreImageContent(
+                            source: source,
+                            name: storeName,
+                            placeholder: Color.black,
+                            contentMode: .fit
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .tag(index)
+                    }
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea()
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 42, height: 42)
+                            .background(.black.opacity(0.46), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("閉じる")
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+
+                Spacer()
+
+                if sources.count > 1 {
+                    PhotoPageDots(count: sources.count, selectedIndex: selectedImageIndex)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(.black.opacity(0.42), in: Capsule())
+                        .padding(.bottom, 22)
+                }
+            }
+        }
+        .onAppear(perform: clampSelectedImageIndex)
+        .onChange(of: sources) { _, _ in
+            clampSelectedImageIndex()
+        }
+    }
+
+    private func clampSelectedImageIndex() {
+        let maxIndex = max(sources.count - 1, 0)
+        if selectedImageIndex > maxIndex {
+            selectedImageIndex = maxIndex
         }
     }
 }
