@@ -89,6 +89,7 @@ struct ContentView: View {
     @State private var formSeed: StoreFormSeed?
     @State private var detailSeed: StoreDetailSeed?
     @State private var isGenrePickerPresented = false
+    @State private var genrePickerMode: GenrePickerMode = .mainGenres
 
     private var availableSubGenres: [SubGenre] {
         dataStore.subGenres(for: selectedMainGenreId)
@@ -203,7 +204,8 @@ struct ContentView: View {
             .sheet(isPresented: $isGenrePickerPresented) {
                 GenrePickerSheet(
                     selectedMainGenreId: $selectedMainGenreId,
-                    selectedSubGenreId: $selectedSubGenreId
+                    selectedSubGenreId: $selectedSubGenreId,
+                    mode: genrePickerMode
                 )
                 .environmentObject(dataStore)
                 .presentationDetents([.medium, .large])
@@ -216,7 +218,8 @@ struct ContentView: View {
             filterScrollRow(
                 icon: "fork.knife",
                 label: "カテゴリ",
-                tint: AppTheme.tomato
+                tint: AppTheme.tomato,
+                mode: .mainGenres
             ) {
                 ForEach(dataStore.sortedMainGenres) { mainGenre in
                     Button {
@@ -235,7 +238,8 @@ struct ContentView: View {
             filterScrollRow(
                 icon: "tag",
                 label: "ジャンル",
-                tint: AppTheme.olive
+                tint: AppTheme.olive,
+                mode: .subGenres
             ) {
                 ForEach(availableSubGenres) { subGenre in
                     Button {
@@ -374,10 +378,12 @@ struct ContentView: View {
         icon: String,
         label: String,
         tint: Color,
+        mode: GenrePickerMode,
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(spacing: 9) {
             Button {
+                genrePickerMode = mode
                 isGenrePickerPresented = true
             } label: {
                 VStack(spacing: 3) {
@@ -390,10 +396,6 @@ struct ContentView: View {
                 .frame(width: 54, height: 48)
                 .background(tint.opacity(0.11))
                 .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .stroke(tint.opacity(0.34), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                }
             }
             .buttonStyle(.plain)
 
@@ -485,11 +487,17 @@ struct FilterToken: View {
     }
 }
 
+enum GenrePickerMode {
+    case mainGenres
+    case subGenres
+}
+
 struct GenrePickerSheet: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedMainGenreId: String
     @Binding var selectedSubGenreId: String
+    let mode: GenrePickerMode
     @State private var searchText = ""
 
     private var normalizedQuery: String {
@@ -514,78 +522,17 @@ struct GenrePickerSheet: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
-                        mainGenreChips
-
-                        let hasVisibleSubGenres = visibleMainGenres.contains { mainGenre in
-                            !visibleSubGenres(for: mainGenre).isEmpty
-                        }
-
-                        if hasVisibleSubGenres {
-                            ForEach(visibleMainGenres) { mainGenre in
-                                let subGenres = visibleSubGenres(for: mainGenre)
-                                if !subGenres.isEmpty {
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        Text(mainGenre.name)
-                                            .font(.headline.weight(.bold))
-                                            .foregroundStyle(AppTheme.ink)
-                                            .padding(.horizontal, 2)
-
-                                        VStack(spacing: 0) {
-                                            ForEach(subGenres) { subGenre in
-                                                Button {
-                                                    selectedMainGenreId = mainGenre.id
-                                                    selectedSubGenreId = subGenre.id
-                                                    dismiss()
-                                                } label: {
-                                                    HStack(spacing: 12) {
-                                                        Text(subGenre.name)
-                                                            .font(.body.weight(.semibold))
-                                                            .foregroundStyle(AppTheme.ink)
-                                                        Spacer()
-                                                        if selectedMainGenreId == mainGenre.id && selectedSubGenreId == subGenre.id {
-                                                            Image(systemName: "checkmark")
-                                                                .font(.body.weight(.bold))
-                                                                .foregroundStyle(AppTheme.ink)
-                                                        }
-                                                    }
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 13)
-                                                    .contentShape(Rectangle())
-                                                }
-                                                .buttonStyle(.plain)
-
-                                                if subGenre.id != subGenres.last?.id {
-                                                    Rectangle()
-                                                        .fill(AppTheme.hairline)
-                                                        .frame(height: 1)
-                                                        .padding(.leading, 14)
-                                                }
-                                            }
-                                        }
-                                        .background(AppTheme.card)
-                                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                                .stroke(AppTheme.hairline, lineWidth: 1)
-                                        }
-                                    }
-                                }
-                            }
+                        if mode == .mainGenres {
+                            mainGenreList
                         } else {
-                            ContentUnavailableView(
-                                "種類が見つかりません",
-                                systemImage: "magnifyingglass",
-                                description: Text("選択中のジャンル内で別のキーワードを試してください。")
-                            )
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 28)
+                            subGenreList
                         }
                     }
                     .padding(16)
                 }
             }
             .background(AppBackgroundView())
-            .navigationTitle("ジャンルを選択")
+            .navigationTitle(mode == .mainGenres ? "カテゴリを選択" : "ジャンルを選択")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -596,6 +543,80 @@ struct GenrePickerSheet: View {
             }
         }
         .tint(AppTheme.ink)
+    }
+
+    private var mainGenreList: some View {
+        VStack(spacing: 0) {
+            ForEach(filteredMainGenres) { mainGenre in
+                Button {
+                    selectedMainGenreId = mainGenre.id
+                    selectedSubGenreId = dataStore.subGenres(for: mainGenre.id).first?.id ?? ""
+                    dismiss()
+                } label: {
+                    selectionRow(
+                        title: mainGenre.name,
+                        isSelected: selectedMainGenreId == mainGenre.id
+                    )
+                }
+                .buttonStyle(.plain)
+                DashedDivider(color: AppTheme.hairline)
+            }
+        }
+    }
+
+    private var subGenreList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(selectedMainGenre?.name ?? "選択中のカテゴリ")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.tomato)
+
+            VStack(spacing: 0) {
+                ForEach(filteredSelectedSubGenres) { subGenre in
+                    Button {
+                        selectedSubGenreId = subGenre.id
+                        dismiss()
+                    } label: {
+                        selectionRow(
+                            title: subGenre.name,
+                            isSelected: selectedSubGenreId == subGenre.id
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    DashedDivider(color: AppTheme.hairline)
+                }
+            }
+        }
+    }
+
+    private var filteredSelectedSubGenres: [SubGenre] {
+        guard let selectedMainGenre else {
+            return []
+        }
+        return visibleSubGenres(for: selectedMainGenre)
+    }
+
+    private var filteredMainGenres: [MainGenre] {
+        guard !normalizedQuery.isEmpty else {
+            return dataStore.sortedMainGenres
+        }
+        return dataStore.sortedMainGenres.filter { $0.name.lowercased().contains(normalizedQuery) }
+    }
+
+    private func selectionRow(title: String, isSelected: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(AppTheme.tomato)
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 
     private var searchField: some View {
@@ -620,31 +641,6 @@ struct GenrePickerSheet: View {
         .clipShape(Capsule())
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-    }
-
-    private var mainGenreChips: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 10) {
-                ForEach(dataStore.sortedMainGenres) { mainGenre in
-                    Button {
-                        selectedMainGenreId = mainGenre.id
-                        selectedSubGenreId = dataStore.subGenres(for: mainGenre.id).first?.id ?? ""
-                        searchText = ""
-                    } label: {
-                        Text(mainGenre.name)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selectedMainGenreId == mainGenre.id ? .white : AppTheme.ink)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 9)
-                            .background(selectedMainGenreId == mainGenre.id ? AppTheme.ink : AppTheme.softFill)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.vertical, 2)
-        }
-        .scrollIndicators(.hidden)
     }
 
     private func visibleSubGenres(for mainGenre: MainGenre) -> [SubGenre] {
