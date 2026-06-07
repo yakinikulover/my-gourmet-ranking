@@ -846,11 +846,11 @@ struct StoreCardView: View {
             if style == .best, let rank {
                 VStack(spacing: -3) {
                     Text("\(rank)")
-                        .font(.system(size: 38, weight: .regular, design: .serif))
+                        .font(.system(size: 34, weight: .black, design: .rounded))
                         .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                     Text("位")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(AppTheme.ink)
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                 }
                 .frame(width: 42)
                 .overlay(alignment: .trailing) {
@@ -879,11 +879,11 @@ struct TBDCardView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(spacing: -3) {
                 Text("\(rank)")
-                    .font(.system(size: 38, weight: .regular, design: .serif))
+                    .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                 Text("位")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppTheme.ink)
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
             }
             .frame(width: 42)
             .overlay(alignment: .trailing) {
@@ -1336,88 +1336,121 @@ struct StoreDetailView: View {
             Group {
                 if let store {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            ZStack(alignment: .bottomLeading) {
+                        VStack(alignment: .leading, spacing: 24) {
+                            ZStack(alignment: .top) {
                                 DetailHeroImage(store: store)
-                                LinearGradient(colors: [.clear, .black.opacity(0.78)], startPoint: .center, endPoint: .bottom)
-                                    .allowsHitTesting(false)
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(store.rank.label)
-                                        .font(.caption.weight(.bold))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(AppTheme.ink)
-                                        .clipShape(Capsule())
-                                    Text(store.name)
-                                        .font(.system(size: 30, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .lineLimit(2)
-                                }
-                                .padding(18)
-                                .allowsHitTesting(false)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .shadow(color: AppTheme.ink.opacity(0.12), radius: 8, y: 5)
+                                TapeDecoration()
+                                    .frame(width: 72)
+                                    .scaleEffect(1.3)
+                                    .offset(y: -7)
                             }
-                            .frame(height: 280)
-                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .frame(height: 300)
 
-                            VStack(alignment: .leading, spacing: 12) {
-                                detailRow("大ジャンル", dataStore.mainGenreName(for: store.mainGenreId))
-                                detailRow("小ジャンル", dataStore.subGenreName(for: store.subGenreId))
-                                detailRow("現在順位", store.rank.label)
-                                detailRow("元順位", store.previousRank.map { "\($0)位" } ?? "未ランクイン")
-                                detailRow("エリア", store.area ?? "未登録")
-                                detailRow("メモ", store.memo ?? "未登録")
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack(alignment: .top, spacing: 14) {
+                                    detailRankStamp(store.rank.label)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(store.name)
+                                            .font(.system(size: 31, weight: .black, design: .rounded))
+                                            .foregroundStyle(AppTheme.ink)
+                                            .lineLimit(2)
+                                        HStack(spacing: 7) {
+                                            Image(systemName: "mappin")
+                                                .foregroundStyle(AppTheme.olive)
+                                            Text(store.area ?? "エリア未登録")
+                                                .font(.subheadline.weight(.medium))
+                                                .foregroundStyle(AppTheme.softText)
+                                        }
+                                    }
+                                }
 
+                                DashedDivider(color: AppTheme.tomato.opacity(0.55))
+
+                                HStack(spacing: 8) {
+                                    detailTag(dataStore.mainGenreName(for: store.mainGenreId), icon: "fork.knife")
+                                    detailTag(dataStore.subGenreName(for: store.subGenreId), icon: "tag")
+                                    if let previousRank = store.previousRank {
+                                        detailTag("元\(previousRank)位", icon: "arrow.uturn.backward")
+                                    }
+                                }
+                            }
+
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("MY NOTE")
+                                    .font(.caption.weight(.black))
+                                    .tracking(1.5)
+                                    .foregroundStyle(AppTheme.tomato)
+                                Text(store.memo ?? "まだメモはありません。")
+                                    .font(.system(size: 17, weight: .regular, design: .rounded))
+                                    .foregroundStyle(AppTheme.ink)
+                                    .lineSpacing(8)
+                                    .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+                                DashedDivider()
                                 if let mapUrl = store.mapUrl, let url = URL(string: mapUrl) {
-                                    Link("Google Map URLを開く", destination: url)
-                                        .font(.headline)
+                                    Link(destination: url) {
+                                        Label("Google Mapで見る", systemImage: "map")
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(AppTheme.olive)
+                                    }
                                 } else {
-                                    detailRow("Google Map URL", "未登録")
+                                    Label("Google Map 未登録", systemImage: "map")
+                                        .font(.subheadline)
+                                        .foregroundStyle(AppTheme.muted)
                                 }
                             }
+                            .padding(18)
+                            .background(AppTheme.card.opacity(0.72))
+                            .overlay(alignment: .topTrailing) {
+                                TapeDecoration(color: Color(hex: "E6B9A7"))
+                                    .offset(x: -18, y: -5)
+                            }
 
-                            VStack(spacing: 10) {
+                            HStack(spacing: 10) {
                                 Button {
                                     formSeed = StoreFormSeed(store: store)
                                 } label: {
-                                    Label("編集", systemImage: "square.and.pencil")
-                                        .frame(maxWidth: .infinity)
+                                    Label("編集", systemImage: "pencil")
                                 }
                                 .buttonStyle(.borderedProminent)
+                                .tint(AppTheme.tomato)
 
                                 Button {
                                     dataStore.archiveStore(store.id)
                                     dismiss()
                                 } label: {
-                                    Label("Archiveへ移動", systemImage: "archivebox")
-                                        .frame(maxWidth: .infinity)
+                                    Label("Archive", systemImage: "archivebox")
                                 }
                                 .buttonStyle(.bordered)
+                                .tint(AppTheme.olive)
                                 .disabled(store.rank == .archive)
+
+                                Spacer()
 
                                 Button(role: .destructive) {
                                     dataStore.deleteStore(store.id)
                                     dismiss()
                                 } label: {
-                                    Label("削除", systemImage: "trash")
-                                        .frame(maxWidth: .infinity)
+                                    Image(systemName: "trash")
                                 }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.plain)
+                                .foregroundStyle(AppTheme.muted)
                             }
-                            .padding(.top, 8)
                         }
-                        .padding()
+                        .padding(.horizontal, 18)
+                        .padding(.top, 16)
+                        .padding(.bottom, 30)
                     }
                     .background(AppBackgroundView())
                 } else {
                     ContentUnavailableView("店舗が見つかりません", systemImage: "questionmark.folder")
                 }
             }
-            .navigationTitle(store?.name ?? "詳細")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("閉じる") { dismiss() }
+                        .foregroundStyle(AppTheme.ink)
                 }
             }
             .sheet(item: $formSeed) { seed in
@@ -1427,20 +1460,28 @@ struct StoreDetailView: View {
         }
     }
 
-    private func detailRow(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppTheme.softText)
-            Text(value)
-                .font(.body)
-                .foregroundStyle(AppTheme.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(12)
-        .modernCard(cornerRadius: 18)
+    private func detailTag(_ value: String, icon: String) -> some View {
+        Label(value, systemImage: icon)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(AppTheme.softText)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(AppTheme.softFill)
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 
+    private func detailRankStamp(_ label: String) -> some View {
+        Text(label)
+            .font(.system(size: 18, weight: .black, design: .rounded))
+            .foregroundStyle(AppTheme.tomato)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .overlay {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(AppTheme.tomato, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            }
+            .rotationEffect(.degrees(-2))
+    }
 }
 
 struct DetailHeroImage: View {
