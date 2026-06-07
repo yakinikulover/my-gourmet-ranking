@@ -894,12 +894,6 @@ struct StoreCardView: View {
                 }
                 .offset(x: -6)
                 .frame(width: 48, alignment: .center)
-                .overlay(alignment: .trailing) {
-                    DashedDivider(color: AppTheme.hairline)
-                        .frame(width: 104)
-                        .rotationEffect(.degrees(90))
-                        .offset(x: 58)
-                }
             } else {
                 Text(rankLabel)
                     .font(.caption.weight(.semibold))
@@ -930,12 +924,6 @@ struct TBDCardView: View {
             }
             .offset(x: -6)
             .frame(width: 48, alignment: .center)
-            .overlay(alignment: .trailing) {
-                DashedDivider(color: AppTheme.hairline)
-                    .frame(width: 104)
-                    .rotationEffect(.degrees(90))
-                    .offset(x: 58)
-            }
 
             ZStack(alignment: .top) {
                 ZStack {
