@@ -212,34 +212,46 @@ struct ContentView: View {
     }
 
     private var selectorSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 9) {
-                scrapbookFilter(
-                    icon: "fork.knife",
-                    title: selectedMainGenre?.name ?? "ジャンル",
-                    tint: AppTheme.tomato
-                )
-                scrapbookFilter(
-                    icon: "tag",
-                    title: selectedSubGenre?.name ?? "種類",
-                    tint: AppTheme.olive
-                )
-
-                Button {
-                    isGenrePickerPresented = true
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 21, weight: .medium))
-                        .foregroundStyle(AppTheme.ink)
-                        .frame(width: 48, height: 54)
-                        .background(AppTheme.tape.opacity(0.58))
-                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                        .shadow(color: AppTheme.ink.opacity(0.08), radius: 3, y: 2)
+        VStack(alignment: .leading, spacing: 10) {
+            filterScrollRow(
+                icon: "fork.knife",
+                label: "カテゴリ",
+                tint: AppTheme.tomato
+            ) {
+                ForEach(dataStore.sortedMainGenres) { mainGenre in
+                    Button {
+                        selectMainGenre(mainGenre.id)
+                    } label: {
+                        selectorChip(
+                            title: mainGenre.name,
+                            isSelected: selectedMainGenreId == mainGenre.id,
+                            tint: AppTheme.tomato
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
-            HStack(spacing: 12) {
+            filterScrollRow(
+                icon: "tag",
+                label: "ジャンル",
+                tint: AppTheme.olive
+            ) {
+                ForEach(availableSubGenres) { subGenre in
+                    Button {
+                        selectedSubGenreId = subGenre.id
+                    } label: {
+                        selectorChip(
+                            title: subGenre.name,
+                            isSelected: selectedSubGenreId == subGenre.id,
+                            tint: AppTheme.olive
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(spacing: 10) {
                 DashedDivider()
                 NavigationLink {
                     SettingsView()
@@ -358,30 +370,65 @@ struct ContentView: View {
         }
     }
 
-    private func scrapbookFilter(icon: String, title: String, tint: Color) -> some View {
-        Button {
-            isGenrePickerPresented = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(tint)
-                Text(title)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(AppTheme.ink)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(AppTheme.softText)
+    private func filterScrollRow<Content: View>(
+        icon: String,
+        label: String,
+        tint: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: 9) {
+            Button {
+                isGenrePickerPresented = true
+            } label: {
+                VStack(spacing: 3) {
+                    Image(systemName: icon)
+                        .font(.subheadline.weight(.bold))
+                    Text(label)
+                        .font(.system(size: 9, weight: .black, design: .rounded))
+                }
+                .foregroundStyle(tint)
+                .frame(width: 54, height: 48)
+                .background(tint.opacity(0.11))
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .stroke(tint.opacity(0.34), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                }
             }
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(AppTheme.softFill)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .shadow(color: AppTheme.ink.opacity(0.07), radius: 3, y: 2)
+            .buttonStyle(.plain)
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
+                    content()
+                }
+                .padding(.vertical, 2)
+                .padding(.trailing, 2)
+            }
+            .scrollIndicators(.hidden)
+            .contentMargins(.horizontal, 0, for: .scrollContent)
         }
-        .buttonStyle(.plain)
+    }
+
+    private func selectorChip(title: String, isSelected: Bool, tint: Color) -> some View {
+        Text(title)
+            .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
+            .foregroundStyle(isSelected ? .white : AppTheme.ink)
+            .lineLimit(1)
+            .padding(.horizontal, 13)
+            .frame(height: 40)
+            .background(isSelected ? tint : AppTheme.softFill)
+            .clipShape(Capsule())
+            .overlay {
+                if !isSelected {
+                    Capsule()
+                        .stroke(AppTheme.hairline, lineWidth: 1)
+                }
+            }
+    }
+
+    private func selectMainGenre(_ mainGenreId: String) {
+        selectedMainGenreId = mainGenreId
+        selectedSubGenreId = preferredSubGenreId(for: mainGenreId)
     }
 
     private func syncSelection() {
