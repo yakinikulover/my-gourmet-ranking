@@ -854,7 +854,7 @@ struct StoreCardView: View {
                         .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .offset(x: -6)
+                .offset(x: -9)
                 .frame(width: 48, alignment: .center)
                 .overlay(alignment: .trailing) {
                     DashedDivider(color: AppTheme.hairline)
@@ -890,7 +890,7 @@ struct TBDCardView: View {
                     .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            .offset(x: -6)
+            .offset(x: -9)
             .frame(width: 48, alignment: .center)
             .overlay(alignment: .trailing) {
                 DashedDivider(color: AppTheme.hairline)
