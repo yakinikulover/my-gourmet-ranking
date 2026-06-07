@@ -830,10 +830,16 @@ struct StoreCardView: View {
                         .lineLimit(1)
                 }
 
-                Text(store.memo ?? "メモ未登録")
-                    .font(memoFont)
-                    .foregroundStyle(AppTheme.softText)
-                    .lineLimit(2, reservesSpace: true)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "note.text")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.olive)
+                        .frame(width: 12, alignment: .center)
+                    Text(store.memo ?? "メモ未登録")
+                        .font(memoFont)
+                        .foregroundStyle(AppTheme.softText)
+                        .lineLimit(2, reservesSpace: true)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -864,10 +870,16 @@ struct StoreCardView: View {
                     .font(.system(size: titleSize, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.ink)
                     .lineLimit(1)
-                Text(store.memo ?? "メモ未登録")
-                    .font(memoFont)
-                    .foregroundStyle(AppTheme.softText)
-                    .lineLimit(2)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "note.text")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.olive)
+                        .frame(width: 12, alignment: .center)
+                    Text(store.memo ?? "メモ未登録")
+                        .font(memoFont)
+                        .foregroundStyle(AppTheme.softText)
+                        .lineLimit(2)
+                }
             }
             Spacer(minLength: 0)
 
@@ -968,9 +980,15 @@ struct TBDCardView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.softText)
                 }
-                Text("行ったらメモを残そう")
-                    .font(.footnote)
-                    .foregroundStyle(AppTheme.softText)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "note.text")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.olive)
+                        .frame(width: 12, alignment: .center)
+                    Text("行ったらメモを残そう")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.softText)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
