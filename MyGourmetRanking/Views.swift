@@ -832,7 +832,7 @@ struct StoreCardView: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Image(systemName: "note.text")
-                        .font(.caption.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.olive)
                         .frame(width: 12, alignment: .center)
                     Text(store.memo ?? "メモ未登録")
@@ -872,7 +872,7 @@ struct StoreCardView: View {
                     .lineLimit(1)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Image(systemName: "note.text")
-                        .font(.caption.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.olive)
                         .frame(width: 12, alignment: .center)
                     Text(store.memo ?? "メモ未登録")
@@ -982,7 +982,7 @@ struct TBDCardView: View {
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Image(systemName: "note.text")
-                        .font(.caption.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundStyle(AppTheme.olive)
                         .frame(width: 12, alignment: .center)
                     Text("行ったらメモを残そう")
