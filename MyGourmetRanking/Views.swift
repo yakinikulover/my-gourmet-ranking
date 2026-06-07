@@ -848,11 +848,13 @@ struct StoreCardView: View {
                     Text("\(rank)")
                         .font(.system(size: 34, weight: .black, design: .rounded))
                         .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
+                        .frame(maxWidth: .infinity, alignment: .center)
                     Text("位")
                         .font(.caption2.weight(.black))
                         .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .frame(width: 42)
+                .frame(width: 48, alignment: .center)
                 .overlay(alignment: .trailing) {
                     DashedDivider(color: AppTheme.hairline)
                         .frame(width: 104)
@@ -881,11 +883,13 @@ struct TBDCardView: View {
                 Text("\(rank)")
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 Text("位")
                     .font(.caption2.weight(.black))
                     .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
-            .frame(width: 42)
+            .frame(width: 48, alignment: .center)
             .overlay(alignment: .trailing) {
                 DashedDivider(color: AppTheme.hairline)
                     .frame(width: 104)
