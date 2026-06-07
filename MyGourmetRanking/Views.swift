@@ -321,9 +321,6 @@ struct ContentView: View {
 
     private var archiveSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            DashedDivider(color: AppTheme.olive.opacity(0.72))
-                .padding(.top, 2)
-
             HStack(spacing: 10) {
                 Image(systemName: "archivebox")
                     .font(.title3.weight(.medium))
@@ -833,8 +830,6 @@ struct StoreCardView: View {
                         .lineLimit(1)
                 }
 
-                DashedDivider(color: AppTheme.hairline)
-
                 Text(store.memo ?? "メモ未登録")
                     .font(memoFont)
                     .foregroundStyle(AppTheme.softText)
@@ -897,13 +892,13 @@ struct StoreCardView: View {
                         .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .offset(x: -9)
+                .offset(x: -6)
                 .frame(width: 48, alignment: .center)
                 .overlay(alignment: .trailing) {
                     DashedDivider(color: AppTheme.hairline)
                         .frame(width: 104)
                         .rotationEffect(.degrees(90))
-                        .offset(x: 51)
+                        .offset(x: 58)
                 }
             } else {
                 Text(rankLabel)
@@ -933,13 +928,13 @@ struct TBDCardView: View {
                     .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            .offset(x: -9)
+            .offset(x: -6)
             .frame(width: 48, alignment: .center)
             .overlay(alignment: .trailing) {
                 DashedDivider(color: AppTheme.hairline)
                     .frame(width: 104)
                     .rotationEffect(.degrees(90))
-                    .offset(x: 51)
+                    .offset(x: 58)
             }
 
             ZStack(alignment: .top) {
@@ -985,7 +980,6 @@ struct TBDCardView: View {
                         .font(.caption)
                         .foregroundStyle(AppTheme.softText)
                 }
-                DashedDivider(color: AppTheme.hairline)
                 Text("行ったらメモを残そう")
                     .font(.footnote)
                     .foregroundStyle(AppTheme.softText)
