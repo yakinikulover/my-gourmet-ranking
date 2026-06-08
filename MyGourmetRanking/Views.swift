@@ -85,7 +85,7 @@ extension View {
 }
 
 struct ContentView: View {
-    @AppStorage("hasCompletedOnboardingV2") private var hasCompletedOnboarding = false
+    @AppStorage("hasCompletedOnboardingV3") private var hasCompletedOnboarding = false
 
     var body: some View {
         Group {
