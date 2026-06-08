@@ -95,6 +95,17 @@ final class GourmetDataStore: ObservableObject {
         ImageStorage.deleteImages(imageFileNames)
     }
 
+    func updateStoreLocation(_ storeId: String, candidate: LocationSearchCandidate) {
+        guard let index = stores.firstIndex(where: { $0.id == storeId }) else { return }
+        stores[index].latitude = candidate.coordinate.latitude
+        stores[index].longitude = candidate.coordinate.longitude
+        if stores[index].area?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
+            stores[index].area = candidate.area
+        }
+        stores[index].mapUrl = "https://maps.apple.com/?ll=\(candidate.coordinate.latitude),\(candidate.coordinate.longitude)&q=\(candidate.encodedName)"
+        stores[index].updatedAt = Date()
+    }
+
     @discardableResult
     func addMainGenre(name: String) -> String? {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -507,6 +507,7 @@ struct GourmetMapView: View {
     @State private var filter: GourmetMapFilter = .all
     @State private var selectedStoreId: String?
     @State private var detailSeed: StoreDetailSeed?
+    @State private var isOrganizerPresented = false
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
@@ -575,8 +576,23 @@ struct GourmetMapView: View {
             }
             .navigationTitle("グルメMap")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isOrganizerPresented = true
+                    } label: {
+                        Image(systemName: "mappin.and.ellipse")
+                    }
+                    .accessibilityLabel("Map未登録店舗を整理")
+                    .badge(dataStore.stores.filter { $0.coordinate == nil }.count)
+                }
+            }
             .sheet(item: $detailSeed) { seed in
                 StoreDetailView(storeId: seed.id)
+                    .environmentObject(dataStore)
+            }
+            .sheet(isPresented: $isOrganizerPresented) {
+                MapRegistrationOrganizerView()
                     .environmentObject(dataStore)
             }
             .onChange(of: filter) { _, _ in
@@ -611,6 +627,194 @@ struct GourmetMapView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
+    }
+}
+
+struct MapRegistrationOrganizerView: View {
+    @EnvironmentObject private var dataStore: GourmetDataStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var skippedStoreIds: Set<String> = []
+    @State private var candidates: [LocationSearchCandidate] = []
+    @State private var selectedCandidateIndex = 0
+    @State private var searchText = ""
+    @State private var isSearching = false
+    @State private var message: String?
+
+    private var unresolvedStores: [Store] {
+        dataStore.stores.filter { $0.coordinate == nil && !skippedStoreIds.contains($0.id) }
+    }
+
+    private var currentStore: Store? { unresolvedStores.first }
+    private var selectedCandidate: LocationSearchCandidate? {
+        candidates.indices.contains(selectedCandidateIndex) ? candidates[selectedCandidateIndex] : nil
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let store = currentStore {
+                    ScrollView {
+                        VStack(spacing: 18) {
+                            HStack {
+                                Text("残り \(unresolvedStores.count)件")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(AppTheme.tomato)
+                                Spacer()
+                                Button("スキップ") {
+                                    skippedStoreIds.insert(store.id)
+                                    resetSearch()
+                                }
+                                .font(.subheadline.weight(.semibold))
+                            }
+
+                            HStack(spacing: 14) {
+                                ThumbnailView(source: store.primaryImageSource, name: store.name, size: 82)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("未登録店舗")
+                                        .font(.caption.weight(.black))
+                                        .foregroundStyle(AppTheme.tomato)
+                                    Text(store.name)
+                                        .font(.title3.weight(.bold))
+                                        .foregroundStyle(AppTheme.ink)
+                                    Text(store.area ?? "エリア未登録")
+                                        .font(.subheadline)
+                                        .foregroundStyle(AppTheme.softText)
+                                }
+                                Spacer()
+                            }
+                            .padding(14)
+                            .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 12))
+
+                            Image(systemName: "arrow.down")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(AppTheme.olive)
+
+                            HStack {
+                                TextField("店名・駅名・住所で再検索", text: $searchText)
+                                    .textFieldStyle(.roundedBorder)
+                                Button {
+                                    Task { await search(query: searchText) }
+                                } label: {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(AppTheme.ink)
+                                .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
+                            }
+
+                            if let message {
+                                Text(message)
+                                    .font(.footnote)
+                                    .foregroundStyle(AppTheme.tomato)
+                            }
+
+                            if let candidate = selectedCandidate {
+                                candidatePanel(candidate)
+                                HStack {
+                                    Button("前の候補") { selectedCandidateIndex -= 1 }
+                                        .disabled(selectedCandidateIndex == 0)
+                                    Spacer()
+                                    Text("\(selectedCandidateIndex + 1) / \(candidates.count)")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(AppTheme.softText)
+                                    Spacer()
+                                    Button("次の候補") { selectedCandidateIndex += 1 }
+                                        .disabled(selectedCandidateIndex >= candidates.count - 1)
+                                }
+
+                                Button {
+                                    dataStore.updateStoreLocation(store.id, candidate: candidate)
+                                    resetSearch()
+                                } label: {
+                                    Label("この場所で保存", systemImage: "checkmark.circle.fill")
+                                        .frame(maxWidth: .infinity)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(AppTheme.tomato)
+                            } else if isSearching {
+                                ProgressView("候補を検索中...")
+                                    .padding(.top, 40)
+                            }
+                        }
+                        .padding(18)
+                    }
+                    .background(AppBackgroundView())
+                    .task(id: store.id) {
+                        searchText = [store.name, store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
+                        await search(query: searchText)
+                    }
+                } else {
+                    ContentUnavailableView(
+                        "整理が完了しました",
+                        systemImage: "checkmark.circle",
+                        description: Text("Map未登録の店舗はありません。")
+                    )
+                }
+            }
+            .navigationTitle("Map未登録を整理")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func candidatePanel(_ candidate: LocationSearchCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("候補の店舗")
+                .font(.caption.weight(.black))
+                .foregroundStyle(AppTheme.olive)
+            Text(candidate.name)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(AppTheme.ink)
+            Label(candidate.area.isEmpty ? "主要地域なし" : candidate.area, systemImage: "mappin")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(AppTheme.softText)
+            Text(candidate.address)
+                .font(.footnote)
+                .foregroundStyle(AppTheme.muted)
+
+            Map(initialPosition: .region(MKCoordinateRegion(
+                center: candidate.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))) {
+                Marker(candidate.name, coordinate: candidate.coordinate)
+                    .tint(AppTheme.tomato)
+            }
+            .frame(height: 220)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .allowsHitTesting(false)
+        }
+        .padding(15)
+        .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    @MainActor
+    private func search(query: String) async {
+        isSearching = true
+        message = nil
+        defer { isSearching = false }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = .pointOfInterest
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            candidates = response.mapItems.prefix(8).map(LocationSearchCandidate.init)
+            selectedCandidateIndex = 0
+            if candidates.isEmpty { message = "候補が見つかりませんでした。検索語を変えてください。" }
+        } catch {
+            candidates = []
+            message = "検索できませんでした。通信環境を確認してください。"
+        }
+    }
+
+    private func resetSearch() {
+        candidates = []
+        selectedCandidateIndex = 0
+        searchText = ""
+        message = nil
     }
 }
 
@@ -1341,6 +1545,7 @@ struct StoreFormView: View {
     @State private var longitude: Double?
     @State private var locationCandidates: [LocationSearchCandidate] = []
     @State private var isSearchingLocation = false
+    @State private var manualLocationQuery = ""
     @State private var validationMessage: String?
 
     init(seed: StoreFormSeed) {
@@ -1440,6 +1645,14 @@ struct StoreFormView: View {
                         Label(isSearchingLocation ? "検索中..." : "店名とエリアから場所を検索", systemImage: "map")
                     }
                     .disabled(isSearchingLocation || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    HStack {
+                        TextField("店名・駅名・住所で手動検索", text: $manualLocationQuery)
+                        Button("検索") {
+                            Task { await searchLocation(query: manualLocationQuery) }
+                        }
+                        .disabled(manualLocationQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearchingLocation)
+                    }
 
                     if latitude != nil, longitude != nil {
                         Label("グルメMapに表示されます", systemImage: "checkmark.circle.fill")
@@ -1597,12 +1810,12 @@ struct StoreFormView: View {
     }
 
     @MainActor
-    private func searchLocation() async {
+    private func searchLocation(query: String? = nil) async {
         isSearchingLocation = true
         defer { isSearchingLocation = false }
 
         let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = [name, area].filter { !$0.isEmpty }.joined(separator: " ")
+        request.naturalLanguageQuery = query ?? [name, area].filter { !$0.isEmpty }.joined(separator: " ")
         request.resultTypes = .pointOfInterest
 
         do {
