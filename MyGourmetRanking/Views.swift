@@ -108,6 +108,7 @@ struct ContentView: View {
 
 struct HomeView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @EnvironmentObject private var proState: ProState
     @State private var selectedMainGenreId = ""
     @State private var selectedSubGenreId = ""
     @State private var formSeed: StoreFormSeed?
@@ -220,10 +221,12 @@ struct HomeView: View {
             .sheet(item: $formSeed) { seed in
                 StoreFormView(seed: seed)
                     .environmentObject(dataStore)
+                    .environmentObject(proState)
             }
             .sheet(item: $detailSeed) { seed in
                 StoreDetailView(storeId: seed.id)
                     .environmentObject(dataStore)
+                    .environmentObject(proState)
             }
             .sheet(isPresented: $isGenrePickerPresented) {
                 GenrePickerSheet(
@@ -504,6 +507,7 @@ private enum GourmetMapFilterSheet: String, Identifiable {
 
 struct GourmetMapView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @EnvironmentObject private var proState: ProState
     @StateObject private var locationManager = LocationManager()
     @State private var selectedMainGenreId: String?
     @State private var selectedSubGenreId: String?
@@ -513,6 +517,7 @@ struct GourmetMapView: View {
     @State private var detailSeed: StoreDetailSeed?
     @State private var isOrganizerPresented = false
     @State private var isNearbyRegistrationPresented = false
+    @State private var paywallReason: PaywallReason?
     @State private var nearbyStoreCandidate: LocationSearchCandidate?
     @State private var nearbyFormSeed: StoreFormSeed?
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -525,6 +530,7 @@ struct GourmetMapView: View {
     private var mappedStores: [Store] {
         dataStore.stores.filter { store in
             guard store.coordinate != nil else { return false }
+            if !proState.isPro, store.rank != .rank1 { return false }
             if let selectedMainGenreId, store.mainGenreId != selectedMainGenreId { return false }
             if let selectedSubGenreId, store.subGenreId != selectedSubGenreId { return false }
             if let selectedRank, store.rank != selectedRank { return false }
@@ -599,7 +605,11 @@ struct GourmetMapView: View {
                 HStack {
                     Spacer()
                     Button {
-                        isNearbyRegistrationPresented = true
+                        if proState.isPro {
+                            isNearbyRegistrationPresented = true
+                        } else {
+                            paywallReason = .mapFullAccess
+                        }
                     } label: {
                         Label("近くで登録", systemImage: "location.fill")
                             .font(.subheadline.weight(.black))
@@ -622,7 +632,11 @@ struct GourmetMapView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        isOrganizerPresented = true
+                        if proState.isPro {
+                            isOrganizerPresented = true
+                        } else {
+                            paywallReason = .mapFullAccess
+                        }
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "tray.and.arrow.down")
@@ -654,6 +668,7 @@ struct GourmetMapView: View {
             .sheet(item: $detailSeed) { seed in
                 StoreDetailView(storeId: seed.id)
                     .environmentObject(dataStore)
+                    .environmentObject(proState)
             }
             .sheet(isPresented: $isOrganizerPresented) {
                 MapRegistrationOrganizerView(searchRegion: currentSearchRegion)
@@ -679,6 +694,7 @@ struct GourmetMapView: View {
             .sheet(item: $nearbyFormSeed) { seed in
                 StoreFormView(seed: seed, locationCandidate: nearbyStoreCandidate)
                     .environmentObject(dataStore)
+                    .environmentObject(proState)
             }
             .sheet(item: $presentedFilterSheet) { sheet in
                 switch sheet {
@@ -691,6 +707,10 @@ struct GourmetMapView: View {
                 case .rank:
                     GourmetMapRankFilterSheet(selectedRank: $selectedRank)
                 }
+            }
+            .sheet(item: $paywallReason) { reason in
+                PaywallView(reason: reason)
+                    .environmentObject(proState)
             }
             .onChange(of: mappedStores.map(\.id)) { _, _ in clearHiddenSelection() }
             .task {
@@ -713,27 +733,55 @@ struct GourmetMapView: View {
     }
 
     private var mapFilterBar: some View {
-        HStack(spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    mapFilterButton("すべて", isActive: !hasActiveFilters) {
-                        selectedMainGenreId = nil
-                        selectedSubGenreId = nil
-                        selectedRank = nil
+        VStack(spacing: 8) {
+            if !proState.isPro {
+                Button {
+                    paywallReason = .mapFullAccess
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "crown.fill")
+                        Text("FreeプランではBest1のみ表示")
+                        Spacer()
+                        Text("全店舗を表示")
+                        Image(systemName: "chevron.right")
                     }
-                    mapFilterButton(genreFilterLabel, isActive: selectedMainGenreId != nil) {
-                        presentedFilterSheet = .genre
-                    }
-                    mapFilterButton(rankFilterLabel, isActive: selectedRank != nil) {
-                        presentedFilterSheet = .rank
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.tomato)
+                    .padding(.horizontal, 4)
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 8) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        mapFilterButton("すべて", isActive: !hasActiveFilters) {
+                            selectedMainGenreId = nil
+                            selectedSubGenreId = nil
+                            selectedRank = nil
+                        }
+                        mapFilterButton(genreFilterLabel, isActive: selectedMainGenreId != nil) {
+                            if proState.isPro {
+                                presentedFilterSheet = .genre
+                            } else {
+                                paywallReason = .mapFullAccess
+                            }
+                        }
+                        mapFilterButton(rankFilterLabel, isActive: selectedRank != nil) {
+                            if proState.isPro {
+                                presentedFilterSheet = .rank
+                            } else {
+                                paywallReason = .mapFullAccess
+                            }
+                        }
                     }
                 }
+                Spacer()
+                Text("\(mappedStores.count)件")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.softText)
+                    .fixedSize()
             }
-            Spacer()
-            Text("\(mappedStores.count)件")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(AppTheme.softText)
-                .fixedSize()
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -2054,6 +2102,7 @@ struct PhotoDraftThumbnail: View {
 
 struct StoreFormView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @EnvironmentObject private var proState: ProState
     @Environment(\.dismiss) private var dismiss
 
     private let seed: StoreFormSeed
@@ -2075,6 +2124,7 @@ struct StoreFormView: View {
     @State private var isSearchingLocation = false
     @State private var manualLocationQuery = ""
     @State private var validationMessage: String?
+    @State private var paywallReason: PaywallReason?
 
     init(seed: StoreFormSeed, locationCandidate: LocationSearchCandidate? = nil) {
         self.seed = seed
@@ -2283,6 +2333,10 @@ struct StoreFormView: View {
                         .fontWeight(.bold)
                 }
             }
+            .sheet(item: $paywallReason) { reason in
+                PaywallView(reason: reason)
+                    .environmentObject(proState)
+            }
         }
     }
 
@@ -2298,6 +2352,10 @@ struct StoreFormView: View {
         guard availableRankOptions.contains(rank) else {
             validationMessage = "選択した順位はすでに登録されています。空いている順位かArchiveを選択してください。"
             syncRankSelection()
+            return
+        }
+        guard canSaveArchiveSelection else {
+            paywallReason = .archiveLimit
             return
         }
 
@@ -2329,6 +2387,13 @@ struct StoreFormView: View {
             editingStoreId: seed.store?.id
         )
         dismiss()
+    }
+
+    private var canSaveArchiveSelection: Bool {
+        guard !proState.isPro, rank == .archive, seed.store?.rank != .archive else {
+            return true
+        }
+        return dataStore.stores.filter { $0.rank == .archive }.count < 3
     }
 
     private func syncRankSelection() {
@@ -2490,9 +2555,11 @@ private func searchLocationCandidates(
 
 struct StoreDetailView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @EnvironmentObject private var proState: ProState
     @Environment(\.dismiss) private var dismiss
     let storeId: String
     @State private var formSeed: StoreFormSeed?
+    @State private var paywallReason: PaywallReason?
 
     private var store: Store? {
         dataStore.stores.first { $0.id == storeId }
@@ -2584,8 +2651,12 @@ struct StoreDetailView: View {
                                 .tint(AppTheme.tomato)
 
                                 Button {
-                                    dataStore.archiveStore(store.id)
-                                    dismiss()
+                                    if !proState.isPro, dataStore.stores.filter({ $0.rank == .archive }).count >= 3 {
+                                        paywallReason = .archiveLimit
+                                    } else {
+                                        dataStore.archiveStore(store.id)
+                                        dismiss()
+                                    }
                                 } label: {
                                     Label("Archive", systemImage: "archivebox")
                                 }
@@ -2623,6 +2694,11 @@ struct StoreDetailView: View {
             .sheet(item: $formSeed) { seed in
                 StoreFormView(seed: seed)
                     .environmentObject(dataStore)
+                    .environmentObject(proState)
+            }
+            .sheet(item: $paywallReason) { reason in
+                PaywallView(reason: reason)
+                    .environmentObject(proState)
             }
         }
     }
@@ -2857,9 +2933,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @EnvironmentObject private var proState: ProState
     @State private var selectedTab: SettingsTab = .stores
     @State private var formSeed: StoreFormSeed?
     @State private var message: SettingsMessage?
+    @State private var paywallReason: PaywallReason?
 
     @State private var searchText = ""
     @State private var mainGenreFilter = ""
@@ -2900,6 +2978,7 @@ struct SettingsView: View {
             settingsTabBar
 
             List {
+                proSection
                 switch selectedTab {
                 case .stores:
                     registeredStoreSection
@@ -2921,9 +3000,48 @@ struct SettingsView: View {
         .sheet(item: $formSeed) { seed in
             StoreFormView(seed: seed)
                 .environmentObject(dataStore)
+                .environmentObject(proState)
+        }
+        .sheet(item: $paywallReason) { reason in
+            PaywallView(reason: reason)
+                .environmentObject(proState)
         }
         .alert(item: $message) { message in
             Alert(title: Text(message.title), message: Text(message.body), dismissButton: .default(Text("OK")))
+        }
+        .alert("Pro", isPresented: Binding(get: { proState.message != nil }, set: { if !$0 { proState.message = nil } })) {
+            Button("OK") { proState.message = nil }
+        } message: {
+            Text(proState.message ?? "")
+        }
+    }
+
+    private var proSection: some View {
+        Section("Proプラン") {
+            if proState.isPro {
+                Label("Pro有効", systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(AppTheme.olive)
+            } else {
+                Button {
+                    paywallReason = .settings
+                } label: {
+                    Label("Proにアップグレード", systemImage: "crown.fill")
+                }
+            }
+
+            Button {
+                Task { await proState.restorePurchases() }
+            } label: {
+                Label("購入を復元", systemImage: "arrow.clockwise")
+            }
+            .disabled(proState.isLoading)
+
+            Link(destination: RevenueCatConfig.termsURL) {
+                Label("利用規約", systemImage: "doc.text")
+            }
+            Link(destination: RevenueCatConfig.privacyURL) {
+                Label("プライバシーポリシー", systemImage: "lock")
+            }
         }
     }
 
@@ -2992,7 +3110,11 @@ struct SettingsView: View {
                         StoreSettingsRow(store: store) {
                             formSeed = StoreFormSeed(store: store)
                         } onArchive: {
-                            dataStore.archiveStore(store.id)
+                            if !proState.isPro, dataStore.stores.filter({ $0.rank == .archive }).count >= 3 {
+                                paywallReason = .archiveLimit
+                            } else {
+                                dataStore.archiveStore(store.id)
+                            }
                         } onDelete: {
                             dataStore.deleteStore(store.id)
                         }
@@ -3007,6 +3129,7 @@ struct SettingsView: View {
             Section("大ジャンル追加") {
                 TextField("大ジャンル名", text: $newMainGenreName)
                 Button("追加") {
+                    guard requireProForEditing() else { return }
                     if let error = dataStore.addMainGenre(name: newMainGenreName) {
                         showError(error)
                     } else {
@@ -3021,6 +3144,7 @@ struct SettingsView: View {
                         TextField("ジャンル名", text: bindingForMainGenre(id: genre.id, fallback: genre.name))
                         HStack {
                             Button("保存") {
+                                guard requireProForEditing() else { return }
                                 if let error = dataStore.updateMainGenre(
                                     id: genre.id,
                                     name: mainGenreDrafts[genre.id] ?? genre.name
@@ -3029,15 +3153,18 @@ struct SettingsView: View {
                                 }
                             }
                             Button("上へ") {
+                                guard requireProForEditing() else { return }
                                 dataStore.moveMainGenre(id: genre.id, direction: .up)
                             }
                             .disabled(index == 0)
                             Button("下へ") {
+                                guard requireProForEditing() else { return }
                                 dataStore.moveMainGenre(id: genre.id, direction: .down)
                             }
                             .disabled(index == dataStore.sortedMainGenres.count - 1)
                             Spacer()
                             Button("削除", role: .destructive) {
+                                guard requireProForEditing() else { return }
                                 if let error = dataStore.deleteMainGenre(id: genre.id) {
                                     showError(error)
                                 }
@@ -3061,6 +3188,7 @@ struct SettingsView: View {
                 }
                 TextField("小ジャンル名", text: $newSubGenreName)
                 Button("追加") {
+                    guard requireProForEditing() else { return }
                     if let error = dataStore.addSubGenre(mainGenreId: newSubGenreMainId, name: newSubGenreName) {
                         showError(error)
                     } else {
@@ -3092,6 +3220,7 @@ struct SettingsView: View {
                                 }
                                 HStack {
                                     Button("保存") {
+                                        guard requireProForEditing() else { return }
                                         let draft = subGenreDrafts[subGenre.id]
                                             ?? SubGenreDraft(name: subGenre.name, mainGenreId: subGenre.mainGenreId)
                                         if let error = dataStore.updateSubGenre(
@@ -3103,15 +3232,18 @@ struct SettingsView: View {
                                         }
                                     }
                                     Button("上へ") {
+                                        guard requireProForEditing() else { return }
                                         dataStore.moveSubGenre(id: subGenre.id, direction: .up)
                                     }
                                     .disabled(index == 0)
                                     Button("下へ") {
+                                        guard requireProForEditing() else { return }
                                         dataStore.moveSubGenre(id: subGenre.id, direction: .down)
                                     }
                                     .disabled(index == children.count - 1)
                                     Spacer()
                                     Button("削除", role: .destructive) {
+                                        guard requireProForEditing() else { return }
                                         if let error = dataStore.deleteSubGenre(id: subGenre.id) {
                                             showError(error)
                                         }
@@ -3179,6 +3311,12 @@ struct SettingsView: View {
 
     private func showError(_ message: String) {
         self.message = SettingsMessage(title: "操作できません", body: message)
+    }
+
+    private func requireProForEditing() -> Bool {
+        guard !proState.isPro else { return true }
+        paywallReason = .genreEditing
+        return false
     }
 }
 
