@@ -15,8 +15,14 @@ final class ProState: ObservableObject {
         guard !hasConfiguredRevenueCat else { return }
         hasConfiguredRevenueCat = true
 
+        if RevenueCatConfig.forceProForUAT {
+            isPro = true
+        }
+
         guard RevenueCatConfig.isConfigured else {
-            message = "RevenueCatのSDK Keyが未設定です。公開前に設定してください。"
+            if !RevenueCatConfig.forceProForUAT {
+                message = "RevenueCatのSDK Keyが未設定です。公開前に設定してください。"
+            }
             return
         }
 
@@ -104,6 +110,7 @@ final class ProState: ObservableObject {
     }
 
     private func apply(_ customerInfo: CustomerInfo) {
-        isPro = customerInfo.entitlements[RevenueCatConfig.entitlementIdentifier]?.isActive == true
+        isPro = RevenueCatConfig.forceProForUAT
+            || customerInfo.entitlements[RevenueCatConfig.entitlementIdentifier]?.isActive == true
     }
 }

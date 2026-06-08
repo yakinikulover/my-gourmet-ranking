@@ -10,6 +10,12 @@ enum RevenueCatConfig {
     static let termsURL = URL(string: "https://example.com/terms")!
     static let privacyURL = URL(string: "https://example.com/privacy")!
 
+    #if DEBUG
+    static let forceProForUAT = true
+    #else
+    static let forceProForUAT = false
+    #endif
+
     static var isConfigured: Bool {
         !publicSDKKey.isEmpty && publicSDKKey != "REVENUECAT_PUBLIC_SDK_KEY"
     }
