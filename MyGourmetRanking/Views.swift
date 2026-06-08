@@ -85,7 +85,7 @@ extension View {
 }
 
 struct ContentView: View {
-    @AppStorage("hasCompletedOnboardingV2") private var hasCompletedOnboarding = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
         Group {
@@ -251,24 +251,32 @@ private struct OnboardingPageView: View {
     let page: OnboardingPage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 24) {
             OnboardingVisual(page: page)
                 .frame(maxWidth: .infinity)
-                .frame(height: 460)
+                .frame(height: 330)
+                .padding(.top, 10)
 
-            HStack(alignment: .top, spacing: 12) {
-                Text(String(format: "%02d", OnboardingPage.samplePages.firstIndex(where: { $0.eyebrow == page.eyebrow })! + 1))
-                    .font(.system(size: 38, weight: .black, design: .rounded))
-                    .foregroundStyle(AppTheme.tomato)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(page.title)
-                        .font(.headline.weight(.black))
-                        .foregroundStyle(AppTheme.ink)
-                    Text(page.body)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(AppTheme.softText)
-                        .lineSpacing(3)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: page.systemImage)
+                    Text(page.eyebrow)
                 }
+                .font(.caption.weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(page.accent)
+
+                Text(page.title)
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(page.body)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(AppTheme.softText)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
 
@@ -281,34 +289,44 @@ private struct OnboardingVisual: View {
     let page: OnboardingPage
 
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Text(page.eyebrow)
-                    .font(.caption.weight(.black))
-                    .tracking(1)
-                Rectangle()
-                    .fill(AppTheme.tomato)
-                    .frame(height: 2)
-            }
-            .foregroundStyle(AppTheme.tomato)
-            .padding(.horizontal, 34)
+        ZStack {
+            Circle()
+                .fill(page.accent.opacity(0.08))
+                .frame(width: 280, height: 280)
+                .offset(x: 55, y: -24)
+            Circle()
+                .fill(AppTheme.olive.opacity(0.08))
+                .frame(width: 180, height: 180)
+                .offset(x: -90, y: 72)
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 42, style: .continuous)
-                    .fill(Color.black)
-                    .frame(width: 286, height: 410)
-                    .shadow(color: AppTheme.ink.opacity(0.2), radius: 18, y: 10)
-                RoundedRectangle(cornerRadius: 34, style: .continuous)
-                    .fill(AppTheme.background)
-                    .frame(width: 270, height: 394)
-                Capsule()
-                    .fill(Color.black)
-                    .frame(width: 82, height: 22)
-                    .offset(y: -181)
-                visualContent
-                    .frame(width: 246, height: 344)
-                    .offset(y: 10)
-            }
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(AppTheme.card.opacity(0.92))
+                .frame(width: 268, height: 286)
+                .rotationEffect(.degrees(-2))
+                .shadow(color: AppTheme.ink.opacity(0.09), radius: 22, y: 14)
+
+            DashedDivider(color: AppTheme.hairline)
+                .frame(width: 235)
+                .rotationEffect(.degrees(-2))
+                .offset(y: -106)
+
+            TapeDecoration(color: AppTheme.tape)
+                .scaleEffect(1.18)
+                .offset(x: -65, y: -138)
+
+            visualContent
+
+            Image(systemName: "sparkles")
+                .font(.title2.weight(.black))
+                .foregroundStyle(page.accent)
+                .rotationEffect(.degrees(-12))
+                .offset(x: -132, y: -118)
+
+            Image(systemName: "arrow.down.right")
+                .font(.title3.weight(.black))
+                .foregroundStyle(AppTheme.olive)
+                .rotationEffect(.degrees(-10))
+                .offset(x: 126, y: -90)
         }
     }
 
@@ -317,97 +335,66 @@ private struct OnboardingVisual: View {
         switch page.style {
         case .welcome:
             ZStack {
-                VStack(alignment: .leading, spacing: 12) {
-                    Spacer()
-                    Text("自分だけの、\nうまい店帳。")
-                        .font(.system(size: 30, weight: .black, design: .rounded))
-                        .foregroundStyle(AppTheme.ink)
-                        .rotationEffect(.degrees(-2))
-                    Rectangle().fill(AppTheme.tomato).frame(width: 170, height: 3)
-                    Text("食べた感動を、かんたんに記録。\nあなたのグルメ体験を最高の形で残そう！")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.softText)
-                    Spacer()
-                    HStack(alignment: .bottom, spacing: -12) {
-                        FoodTile(title: "焼肉", color: AppTheme.tomato, icon: "flame.fill")
-                            .rotationEffect(.degrees(-7))
-                        FoodTile(title: "カフェ", color: AppTheme.olive, icon: "cup.and.saucer.fill")
-                            .rotationEffect(.degrees(5))
-                    }
-                }
-                .padding(16)
+                FoodTile(title: "寿司", color: AppTheme.tomato, icon: "takeoutbag.and.cup.and.straw.fill")
+                    .offset(x: -62, y: -48)
+                    .rotationEffect(.degrees(-8))
+                FoodTile(title: "焼肉", color: AppTheme.ink, icon: "flame.fill")
+                    .offset(x: 58, y: -12)
+                    .rotationEffect(.degrees(7))
+                FoodTile(title: "カフェ", color: AppTheme.olive, icon: "cup.and.saucer.fill")
+                    .offset(x: -2, y: 70)
+                    .rotationEffect(.degrees(-2))
             }
         case .ranking:
-            VStack(alignment: .leading, spacing: 7) {
-                Text("Best5で記録")
-                    .font(.system(size: 26, weight: .black, design: .rounded))
-                Rectangle().fill(AppTheme.tomato).frame(width: 125, height: 3)
+            VStack(spacing: 10) {
                 ForEach(1...5, id: \.self) { rank in
                     HStack(spacing: 12) {
                         Text("\(rank)")
-                            .font(.system(size: 25, weight: .black, design: .rounded))
+                            .font(.system(size: 28, weight: .black, design: .rounded))
                             .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
                             .frame(width: 30)
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(rank <= 2 ? AppTheme.tomato.opacity(0.22) : AppTheme.softFill)
-                            .frame(width: 68, height: 45)
-                            .overlay(Text(rank <= 2 ? "名店" : "TBD").font(.caption.weight(.black)))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Rectangle().fill(AppTheme.ink).frame(width: rank <= 2 ? 78 : 42, height: 5)
-                            Rectangle().fill(AppTheme.hairline).frame(width: 94, height: 4)
-                            Rectangle().fill(AppTheme.hairline).frame(width: 70, height: 4)
-                        }
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(rank == 1 ? AppTheme.tomato.opacity(0.18) : AppTheme.softFill)
+                            .frame(width: rank == 1 ? 118 : 92, height: 20)
+                        Spacer()
                     }
-                    .padding(5)
-                    .background(AppTheme.card)
+                    .frame(width: 200)
                 }
             }
-            .padding(12)
+            .padding(.top, 10)
         case .map:
-            VStack(alignment: .leading, spacing: 8) {
-                Text("行った店が\n地図になる")
-                    .font(.system(size: 25, weight: .black, design: .rounded))
-                ZStack {
-                    AppTheme.softFill
-                    ForEach(0..<7, id: \.self) { index in
-                        Rectangle()
-                            .fill(index % 2 == 0 ? Color.white : AppTheme.hairline)
-                            .frame(width: 280, height: 2)
-                            .rotationEffect(.degrees(Double(index * 17 - 45)))
-                    }
-                    MapPinLabel(text: "1", color: AppTheme.tomato).scaleEffect(0.75).offset(x: -30, y: -20)
-                    MapPinLabel(text: "2", color: AppTheme.tomato).scaleEffect(0.75).offset(x: 58, y: -74)
-                    MapPinLabel(text: "4", color: AppTheme.olive).scaleEffect(0.75).offset(x: 22, y: 78)
-                    MapPinLabel(text: "5", color: AppTheme.olive).scaleEffect(0.75).offset(x: 72, y: 36)
+            ZStack {
+                ForEach(0..<4, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(AppTheme.hairline, lineWidth: 1)
+                        .frame(width: 210, height: 1)
+                        .rotationEffect(.degrees(Double(index * 18 - 24)))
+                        .offset(y: CGFloat(index * 34 - 48))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                MapPinLabel(text: "1", color: AppTheme.tomato)
+                    .offset(x: -48, y: -28)
+                MapPinLabel(text: "A", color: AppTheme.olive)
+                    .offset(x: 54, y: 38)
+                MapPinLabel(text: "5", color: AppTheme.ink)
+                    .offset(x: 20, y: -78)
             }
-            .padding(12)
         case .archive:
-            VStack(alignment: .leading, spacing: 9) {
-                Text("過去の名店も\n残せる")
-                    .font(.system(size: 25, weight: .black, design: .rounded))
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "archivebox.fill")
                         .foregroundStyle(AppTheme.olive)
                     Text("Archive")
                         .font(.title2.weight(.black))
                 }
-                ForEach(["宮田麺児", "麺屋 一燈", "ホルモン焼き かどや"], id: \.self) { text in
-                    HStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 8).fill(AppTheme.tomato.opacity(0.18)).frame(width: 56, height: 48)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(text).font(.caption.weight(.black))
-                            Text("メモ未登録").font(.caption2).foregroundStyle(AppTheme.softText)
-                        }
-                        Spacer()
-                        Image(systemName: "bookmark.fill").foregroundStyle(AppTheme.olive)
-                    }
-                    .padding(7)
-                    .background(AppTheme.card)
+                ForEach(["元 1位  浅草の名店", "未ランクイン  深夜飯", "元 4位  また行きたい"], id: \.self) { text in
+                    Text(text)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(AppTheme.softFill, in: Capsule())
                 }
             }
-            .padding(12)
         }
     }
 }
