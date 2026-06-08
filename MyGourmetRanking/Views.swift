@@ -494,17 +494,19 @@ struct FilterToken: View {
     }
 }
 
-enum GourmetMapFilter: String, CaseIterable, Identifiable {
-    case all = "すべて"
-    case best = "Best5"
-    case archive = "Archive"
+private enum GourmetMapFilterSheet: String, Identifiable {
+    case genre
+    case rank
 
     var id: String { rawValue }
 }
 
 struct GourmetMapView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
-    @State private var filter: GourmetMapFilter = .all
+    @State private var selectedMainGenreId: String?
+    @State private var selectedSubGenreId: String?
+    @State private var selectedRank: StoreRank?
+    @State private var presentedFilterSheet: GourmetMapFilterSheet?
     @State private var selectedStoreId: String?
     @State private var detailSeed: StoreDetailSeed?
     @State private var isOrganizerPresented = false
@@ -518,15 +520,29 @@ struct GourmetMapView: View {
     private var mappedStores: [Store] {
         dataStore.stores.filter { store in
             guard store.coordinate != nil else { return false }
-            switch filter {
-            case .all:
-                return true
-            case .best:
-                return store.rank != .archive
-            case .archive:
-                return store.rank == .archive
-            }
+            if let selectedMainGenreId, store.mainGenreId != selectedMainGenreId { return false }
+            if let selectedSubGenreId, store.subGenreId != selectedSubGenreId { return false }
+            if let selectedRank, store.rank != selectedRank { return false }
+            return true
         }
+    }
+
+    private var hasActiveFilters: Bool {
+        selectedMainGenreId != nil || selectedSubGenreId != nil || selectedRank != nil
+    }
+
+    private var genreFilterLabel: String {
+        if let selectedSubGenreId {
+            return dataStore.subGenreName(for: selectedSubGenreId)
+        }
+        if let selectedMainGenreId {
+            return dataStore.mainGenreName(for: selectedMainGenreId)
+        }
+        return "ジャンル"
+    }
+
+    private var rankFilterLabel: String {
+        selectedRank?.label ?? "順位"
     }
 
     private var selectedStore: Store? {
@@ -620,38 +636,182 @@ struct GourmetMapView: View {
                 MapRegistrationOrganizerView()
                     .environmentObject(dataStore)
             }
-            .onChange(of: filter) { _, _ in
-                if let selectedStoreId, !mappedStores.contains(where: { $0.id == selectedStoreId }) {
-                    self.selectedStoreId = nil
+            .sheet(item: $presentedFilterSheet) { sheet in
+                switch sheet {
+                case .genre:
+                    GourmetMapGenreFilterSheet(
+                        selectedMainGenreId: $selectedMainGenreId,
+                        selectedSubGenreId: $selectedSubGenreId
+                    )
+                    .environmentObject(dataStore)
+                case .rank:
+                    GourmetMapRankFilterSheet(selectedRank: $selectedRank)
                 }
             }
+            .onChange(of: mappedStores.map(\.id)) { _, _ in clearHiddenSelection() }
         }
     }
 
     private var mapFilterBar: some View {
         HStack(spacing: 8) {
-            ForEach(GourmetMapFilter.allCases) { option in
-                Button {
-                    filter = option
-                } label: {
-                    Text(option.rawValue)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(filter == option ? .white : AppTheme.ink)
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 9)
-                        .background(filter == option ? AppTheme.ink : AppTheme.card)
-                        .clipShape(Capsule())
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    mapFilterButton("すべて", isActive: !hasActiveFilters) {
+                        selectedMainGenreId = nil
+                        selectedSubGenreId = nil
+                        selectedRank = nil
+                    }
+                    mapFilterButton(genreFilterLabel, isActive: selectedMainGenreId != nil) {
+                        presentedFilterSheet = .genre
+                    }
+                    mapFilterButton(rankFilterLabel, isActive: selectedRank != nil) {
+                        presentedFilterSheet = .rank
+                    }
                 }
-                .buttonStyle(.plain)
             }
             Spacer()
             Text("\(mappedStores.count)件")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(AppTheme.softText)
+                .fixedSize()
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
+    }
+
+    private func mapFilterButton(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .lineLimit(1)
+                if title != "すべて" {
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.black))
+                }
+            }
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(isActive ? .white : AppTheme.ink)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(isActive ? AppTheme.ink : AppTheme.card)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func clearHiddenSelection() {
+        if let selectedStoreId, !mappedStores.contains(where: { $0.id == selectedStoreId }) {
+            self.selectedStoreId = nil
+        }
+    }
+}
+
+private struct GourmetMapGenreFilterSheet: View {
+    @EnvironmentObject private var dataStore: GourmetDataStore
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedMainGenreId: String?
+    @Binding var selectedSubGenreId: String?
+
+    private var visibleSubGenres: [SubGenre] {
+        guard let selectedMainGenreId else { return [] }
+        return dataStore.subGenres(for: selectedMainGenreId)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("大項目") {
+                    selectionRow("すべてのジャンル", selected: selectedMainGenreId == nil) {
+                        selectedMainGenreId = nil
+                        selectedSubGenreId = nil
+                    }
+                    ForEach(dataStore.sortedMainGenres) { genre in
+                        selectionRow(genre.name, selected: selectedMainGenreId == genre.id) {
+                            selectedMainGenreId = genre.id
+                            selectedSubGenreId = nil
+                        }
+                    }
+                }
+
+                if selectedMainGenreId != nil {
+                    Section("中項目") {
+                        selectionRow("すべて", selected: selectedSubGenreId == nil) {
+                            selectedSubGenreId = nil
+                        }
+                        ForEach(visibleSubGenres) { genre in
+                            selectionRow(genre.name, selected: selectedSubGenreId == genre.id) {
+                                selectedSubGenreId = genre.id
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("ジャンルで絞り込む")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") { dismiss() }
+                        .fontWeight(.bold)
+                }
+            }
+        }
+    }
+
+    private func selectionRow(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                if selected {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.tomato)
+                }
+            }
+        }
+    }
+}
+
+private struct GourmetMapRankFilterSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedRank: StoreRank?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                selectionRow("すべての順位", rank: nil)
+                ForEach(StoreRank.allCases) { rank in
+                    selectionRow(rank.label, rank: rank)
+                }
+            }
+            .navigationTitle("順位で絞り込む")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完了") { dismiss() }
+                        .fontWeight(.bold)
+                }
+            }
+        }
+    }
+
+    private func selectionRow(_ title: String, rank: StoreRank?) -> some View {
+        Button {
+            selectedRank = rank
+        } label: {
+            HStack {
+                Text(title)
+                    .foregroundStyle(AppTheme.ink)
+                Spacer()
+                if selectedRank == rank {
+                    Image(systemName: "checkmark")
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.tomato)
+                }
+            }
+        }
     }
 }
 
