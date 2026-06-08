@@ -1041,40 +1041,32 @@ struct GourmetMapPin: View {
     }
 
     var body: some View {
-        VStack(spacing: -1) {
-            HStack(spacing: 4) {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle()
+                    .fill(accent)
                 if let rank = store.rank.numericValue {
                     Text("\(rank)")
-                        .font(.caption.weight(.black))
-                    Text("位")
-                        .font(.system(size: 8, weight: .black))
+                        .font(.system(size: 14, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
                 } else {
-                    Image(systemName: "archivebox")
-                        .font(.caption.weight(.black))
+                    Image(systemName: "archivebox.fill")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
                 }
             }
-            .foregroundStyle(isSelected ? .white : accent)
-            .padding(.horizontal, store.rank == .archive ? 9 : 10)
-            .padding(.vertical, 6)
-            .background(isSelected ? accent : AppTheme.card, in: RoundedRectangle(cornerRadius: 8))
+            .frame(width: isSelected ? 38 : 32, height: isSelected ? 38 : 32)
             .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(accent.opacity(isSelected ? 0 : 0.45), lineWidth: 1)
+                Circle().stroke(.white, lineWidth: 2)
             }
-            .shadow(color: .black.opacity(isSelected ? 0.18 : 0.1), radius: isSelected ? 5 : 3, y: 2)
+            .shadow(color: .black.opacity(isSelected ? 0.18 : 0.12), radius: isSelected ? 4 : 3, y: 2)
 
             Image(systemName: "triangle.fill")
-                .font(.system(size: 8))
-                .foregroundStyle(isSelected ? accent : AppTheme.card)
+                .font(.system(size: 9))
+                .foregroundStyle(accent)
                 .rotationEffect(.degrees(180))
-                .overlay {
-                    Image(systemName: "triangle")
-                        .font(.system(size: 8))
-                        .foregroundStyle(accent.opacity(isSelected ? 1 : 0.45))
-                        .rotationEffect(.degrees(180))
-                }
+                .offset(y: -2)
         }
-        .scaleEffect(isSelected ? 1.08 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
     }
 }
