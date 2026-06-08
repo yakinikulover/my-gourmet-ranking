@@ -533,6 +533,10 @@ struct GourmetMapView: View {
         dataStore.stores.first { $0.id == selectedStoreId }
     }
 
+    private var unregisteredMapCount: Int {
+        dataStore.stores.filter { $0.coordinate == nil }.count
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
@@ -581,10 +585,31 @@ struct GourmetMapView: View {
                     Button {
                         isOrganizerPresented = true
                     } label: {
-                        Image(systemName: "mappin.and.ellipse")
+                        HStack(spacing: 5) {
+                            Image(systemName: "tray.and.arrow.down")
+                                .font(.caption.weight(.bold))
+                            Text("未登録")
+                                .font(.caption.weight(.black))
+                            if unregisteredMapCount > 0 {
+                                Text("\(unregisteredMapCount)")
+                                    .font(.caption2.weight(.black))
+                                    .foregroundStyle(.white)
+                                    .frame(minWidth: 20, minHeight: 20)
+                                    .background(AppTheme.tomato, in: Circle())
+                            }
+                        }
+                        .foregroundStyle(AppTheme.ink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(AppTheme.card.opacity(0.94), in: Capsule())
+                        .overlay {
+                            Capsule()
+                                .stroke(AppTheme.hairline, lineWidth: 1)
+                        }
                     }
                     .accessibilityLabel("Map未登録店舗を整理")
-                    .badge(dataStore.stores.filter { $0.coordinate == nil }.count)
+                    .disabled(unregisteredMapCount == 0)
+                    .opacity(unregisteredMapCount == 0 ? 0.55 : 1)
                 }
             }
             .sheet(item: $detailSeed) { seed in
