@@ -1055,14 +1055,14 @@ struct MapRegistrationOrganizerView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(AppTheme.olive)
-                TextField("候補の店舗名を検索", text: $searchText)
+                TextField("候補の店舗名を検索", text: candidateSearchTextBinding)
                     .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
                     .submitLabel(.search)
                     .onSubmit {
-                        Task { await search(query: searchText, store: currentStore) }
+                        Task { await search(query: visibleSearchText, store: currentStore) }
                     }
-                if !searchText.isEmpty {
+                if !visibleSearchText.isEmpty {
                     Button {
                         searchText = ""
                     } label: {
@@ -1082,7 +1082,7 @@ struct MapRegistrationOrganizerView: View {
             }
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
             Button {
-                Task { await search(query: searchText, store: currentStore) }
+                Task { await search(query: visibleSearchText, store: currentStore) }
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.caption.weight(.bold))
@@ -1091,7 +1091,7 @@ struct MapRegistrationOrganizerView: View {
                     .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
-            .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
+            .disabled(visibleSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
         }
     }
 
@@ -1101,10 +1101,11 @@ struct MapRegistrationOrganizerView: View {
         message = nil
         defer { isSearching = false }
 
-        var queries = [query]
+        let displayQuery = searchDisplayText(query, store: store)
+        var queries = [displayQuery]
         if let store {
-            queries.append([store.name, store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " "))
-            queries.append(store.name)
+            queries.append([displaySearchName(for: store), store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " "))
+            queries.append(displaySearchName(for: store))
         }
         candidates = await searchLocationCandidates(queries: queries, region: searchRegion, limit: 8)
         selectedCandidateIndex = 0
@@ -1135,11 +1136,39 @@ struct MapRegistrationOrganizerView: View {
     }
 
     private func displaySearchName(for store: Store) -> String {
-        var parts = store.name
+        searchDisplayText(store.name, store: store)
+    }
+
+    private var visibleSearchText: String {
+        searchDisplayText(searchText, store: currentStore)
+    }
+
+    private var candidateSearchTextBinding: Binding<String> {
+        Binding(
+            get: { visibleSearchText },
+            set: { newValue in
+                searchText = searchDisplayText(newValue, store: currentStore)
+            }
+        )
+    }
+
+    private func searchDisplayText(_ value: String, store: Store?) -> String {
+        var cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let area = store?.area?.trimmingCharacters(in: .whitespacesAndNewlines), !area.isEmpty {
+            let areaSuffixes = [" \(area)", "　\(area)", area]
+            for suffix in areaSuffixes where cleaned.hasSuffix(suffix) && cleaned.count > suffix.count {
+                cleaned.removeLast(suffix.count)
+                cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+        }
+
+        var parts = cleaned
             .split(whereSeparator: { $0.isWhitespace })
             .map(String.init)
         let areaTokens = Set(
-            (store.area ?? "")
+            (store?.area ?? "")
                 .split(whereSeparator: { $0.isWhitespace || $0 == "・" || $0 == "," || $0 == "、" })
                 .map(String.init)
         )
@@ -1148,8 +1177,8 @@ struct MapRegistrationOrganizerView: View {
             parts.removeLast()
         }
 
-        let cleaned = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-        return cleaned.isEmpty ? store.name : cleaned
+        let nameOnly = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return nameOnly.isEmpty ? value.trimmingCharacters(in: .whitespacesAndNewlines) : nameOnly
     }
 
     private func isSearchAreaToken(_ token: String, areaTokens: Set<String>) -> Bool {
