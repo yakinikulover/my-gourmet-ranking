@@ -1173,7 +1173,12 @@ struct MapRegistrationOrganizerView: View {
         defer { isSearching = false }
 
         searchText = query
-        candidates = await searchLocationCandidates(queries: [query], region: searchRegion, limit: 8)
+        let area = currentStore?.area?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let queries = [
+            [query, area].filter { !$0.isEmpty }.joined(separator: " "),
+            query
+        ]
+        candidates = await searchLocationCandidates(queries: queries, region: nil, limit: 8)
     }
 
     private func resetSearch() {
