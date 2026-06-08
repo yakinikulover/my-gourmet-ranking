@@ -85,7 +85,23 @@ extension View {
 }
 
 struct ContentView: View {
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     var body: some View {
+        Group {
+            if hasCompletedOnboarding {
+                mainTabs
+            } else {
+                OnboardingView {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                        hasCompletedOnboarding = true
+                    }
+                }
+            }
+        }
+    }
+
+    private var mainTabs: some View {
         TabView {
             HomeView()
                 .tabItem {
@@ -103,6 +119,338 @@ struct ContentView: View {
                 }
         }
         .tint(AppTheme.tomato)
+    }
+}
+
+private struct OnboardingView: View {
+    let onFinish: () -> Void
+    @State private var selectedPage = 0
+
+    private let pages = OnboardingPage.samplePages
+
+    var body: some View {
+        ZStack {
+            AppBackgroundView()
+
+            VStack(spacing: 0) {
+                HStack {
+                    Button("スキップ") {
+                        onFinish()
+                    }
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(AppTheme.softText)
+
+                    Spacer()
+
+                    Text("My Gourmet Ranking")
+                        .font(.caption.weight(.black))
+                        .tracking(1.2)
+                        .foregroundStyle(AppTheme.tomato)
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+                .padding(.bottom, 6)
+
+                TabView(selection: $selectedPage) {
+                    ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
+                        OnboardingPageView(page: page)
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                VStack(spacing: 18) {
+                    HStack(spacing: 7) {
+                        ForEach(pages.indices, id: \.self) { index in
+                            Capsule()
+                                .fill(index == selectedPage ? AppTheme.tomato : AppTheme.hairline)
+                                .frame(width: index == selectedPage ? 24 : 7, height: 7)
+                                .animation(.spring(response: 0.32, dampingFraction: 0.82), value: selectedPage)
+                        }
+                    }
+
+                    Button {
+                        if selectedPage == pages.count - 1 {
+                            onFinish()
+                        } else {
+                            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                                selectedPage += 1
+                            }
+                        }
+                    } label: {
+                        Text(selectedPage == pages.count - 1 ? "はじめる" : "次へ")
+                            .font(.headline.weight(.black))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 15)
+                            .background(AppTheme.tomato, in: Capsule())
+                            .shadow(color: AppTheme.tomato.opacity(0.24), radius: 16, y: 8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+}
+
+private struct OnboardingPage: Identifiable {
+    let id = UUID()
+    let eyebrow: String
+    let title: String
+    let body: String
+    let accent: Color
+    let systemImage: String
+    let style: OnboardingVisualStyle
+
+    static let samplePages: [OnboardingPage] = [
+        .init(
+            eyebrow: "WELCOME",
+            title: "自分だけの、うまい店帳。",
+            body: "行った店を忘れない。ジャンルごとにBest5を育てて、あなたの食の記録を一冊に。",
+            accent: AppTheme.tomato,
+            systemImage: "fork.knife",
+            style: .welcome
+        ),
+        .init(
+            eyebrow: "BEST 5",
+            title: "順位で残すと、記憶が濃くなる。",
+            body: "1位から5位まで、TBDも含めて見やすく管理。迷ったら、今の好きで並べればOK。",
+            accent: AppTheme.ink,
+            systemImage: "list.number",
+            style: .ranking
+        ),
+        .init(
+            eyebrow: "GOURMET MAP",
+            title: "行った店が、地図に育つ。",
+            body: "保存したお店はMapへ。街ごとの記憶や、また行きたい場所が一目で見える。",
+            accent: AppTheme.olive,
+            systemImage: "map.fill",
+            style: .map
+        ),
+        .init(
+            eyebrow: "ARCHIVE",
+            title: "Best外の名店も、ちゃんと残す。",
+            body: "過去の名店、惜しくも圏外の店、いつかまた行きたい店。Archiveで自分の食史に。",
+            accent: AppTheme.tomato,
+            systemImage: "archivebox.fill",
+            style: .archive
+        )
+    ]
+}
+
+private enum OnboardingVisualStyle {
+    case welcome
+    case ranking
+    case map
+    case archive
+}
+
+private struct OnboardingPageView: View {
+    let page: OnboardingPage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            OnboardingVisual(page: page)
+                .frame(maxWidth: .infinity)
+                .frame(height: 330)
+                .padding(.top, 10)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: page.systemImage)
+                    Text(page.eyebrow)
+                }
+                .font(.caption.weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(page.accent)
+
+                Text(page.title)
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(page.body)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(AppTheme.softText)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 24)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct OnboardingVisual: View {
+    let page: OnboardingPage
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(page.accent.opacity(0.08))
+                .frame(width: 280, height: 280)
+                .offset(x: 55, y: -24)
+            Circle()
+                .fill(AppTheme.olive.opacity(0.08))
+                .frame(width: 180, height: 180)
+                .offset(x: -90, y: 72)
+
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(AppTheme.card.opacity(0.92))
+                .frame(width: 268, height: 286)
+                .rotationEffect(.degrees(-2))
+                .shadow(color: AppTheme.ink.opacity(0.09), radius: 22, y: 14)
+
+            DashedDivider(color: AppTheme.hairline)
+                .frame(width: 235)
+                .rotationEffect(.degrees(-2))
+                .offset(y: -106)
+
+            TapeDecoration(color: AppTheme.tape)
+                .scaleEffect(1.18)
+                .offset(x: -65, y: -138)
+
+            visualContent
+
+            Image(systemName: "sparkles")
+                .font(.title2.weight(.black))
+                .foregroundStyle(page.accent)
+                .rotationEffect(.degrees(-12))
+                .offset(x: -132, y: -118)
+
+            Image(systemName: "arrow.down.right")
+                .font(.title3.weight(.black))
+                .foregroundStyle(AppTheme.olive)
+                .rotationEffect(.degrees(-10))
+                .offset(x: 126, y: -90)
+        }
+    }
+
+    @ViewBuilder
+    private var visualContent: some View {
+        switch page.style {
+        case .welcome:
+            ZStack {
+                FoodTile(title: "寿司", color: AppTheme.tomato, icon: "takeoutbag.and.cup.and.straw.fill")
+                    .offset(x: -62, y: -48)
+                    .rotationEffect(.degrees(-8))
+                FoodTile(title: "焼肉", color: AppTheme.ink, icon: "flame.fill")
+                    .offset(x: 58, y: -12)
+                    .rotationEffect(.degrees(7))
+                FoodTile(title: "カフェ", color: AppTheme.olive, icon: "cup.and.saucer.fill")
+                    .offset(x: -2, y: 70)
+                    .rotationEffect(.degrees(-2))
+            }
+        case .ranking:
+            VStack(spacing: 10) {
+                ForEach(1...5, id: \.self) { rank in
+                    HStack(spacing: 12) {
+                        Text("\(rank)")
+                            .font(.system(size: 28, weight: .black, design: .rounded))
+                            .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
+                            .frame(width: 30)
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(rank == 1 ? AppTheme.tomato.opacity(0.18) : AppTheme.softFill)
+                            .frame(width: rank == 1 ? 118 : 92, height: 20)
+                        Spacer()
+                    }
+                    .frame(width: 200)
+                }
+            }
+            .padding(.top, 10)
+        case .map:
+            ZStack {
+                ForEach(0..<4, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 2)
+                        .stroke(AppTheme.hairline, lineWidth: 1)
+                        .frame(width: 210, height: 1)
+                        .rotationEffect(.degrees(Double(index * 18 - 24)))
+                        .offset(y: CGFloat(index * 34 - 48))
+                }
+                MapPinLabel(text: "1", color: AppTheme.tomato)
+                    .offset(x: -48, y: -28)
+                MapPinLabel(text: "A", color: AppTheme.olive)
+                    .offset(x: 54, y: 38)
+                MapPinLabel(text: "5", color: AppTheme.ink)
+                    .offset(x: 20, y: -78)
+            }
+        case .archive:
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "archivebox.fill")
+                        .foregroundStyle(AppTheme.olive)
+                    Text("Archive")
+                        .font(.title2.weight(.black))
+                }
+                ForEach(["元 1位  浅草の名店", "未ランクイン  深夜飯", "元 4位  また行きたい"], id: \.self) { text in
+                    Text(text)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(AppTheme.softFill, in: Capsule())
+                }
+            }
+        }
+    }
+}
+
+private struct FoodTile: View {
+    let title: String
+    let color: Color
+    let icon: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2.weight(.black))
+                .foregroundStyle(color)
+            Text(title)
+                .font(.caption.weight(.black))
+                .foregroundStyle(AppTheme.ink)
+        }
+        .frame(width: 98, height: 88)
+        .background(AppTheme.softFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(alignment: .top) {
+            TapeDecoration()
+                .offset(y: -6)
+        }
+    }
+}
+
+private struct MapPinLabel: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(text)
+                .font(.headline.weight(.black))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .background(color, in: Circle())
+            Triangle()
+                .fill(color)
+                .frame(width: 15, height: 11)
+                .rotationEffect(.degrees(180))
+                .offset(y: -2)
+        }
+        .shadow(color: color.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }
 
