@@ -779,13 +779,36 @@ struct MapRegistrationOrganizerView: View {
                 .font(.caption.weight(.black))
                 .foregroundStyle(AppTheme.olive)
             HStack(spacing: 8) {
-                TextField("候補の店舗名を検索", text: $searchText)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(AppTheme.ink)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        Task { await search(query: searchText) }
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(AppTheme.olive)
+                    TextField("候補の店舗名を検索", text: $searchText)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(AppTheme.ink)
+                        .submitLabel(.search)
+                        .onSubmit {
+                            Task { await search(query: searchText) }
+                        }
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.muted.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
                     }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(.white, in: RoundedRectangle(cornerRadius: 12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppTheme.olive.opacity(0.28), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
                 Button {
                     Task { await search(query: searchText) }
                 } label: {
