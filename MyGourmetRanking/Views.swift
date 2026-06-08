@@ -874,12 +874,6 @@ struct MapRegistrationOrganizerView: View {
                                 .font(.title3.weight(.bold))
                                 .foregroundStyle(AppTheme.olive)
 
-                            if let message {
-                                Text(message)
-                                    .font(.footnote)
-                                    .foregroundStyle(AppTheme.tomato)
-                            }
-
                             if let candidate = selectedCandidate {
                                 candidatePanel(candidate)
                                 HStack {
@@ -906,6 +900,8 @@ struct MapRegistrationOrganizerView: View {
                             } else if isSearching {
                                 ProgressView("候補を検索中...")
                                     .padding(.top, 40)
+                            } else {
+                                candidateSearchField
                             }
                         }
                         .padding(18)
@@ -938,49 +934,7 @@ struct MapRegistrationOrganizerView: View {
             Text("候補の店舗")
                 .font(.caption.weight(.black))
                 .foregroundStyle(AppTheme.olive)
-            HStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(AppTheme.olive)
-                    TextField("候補の店舗名を検索", text: $searchText)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(AppTheme.ink)
-                        .submitLabel(.search)
-                        .onSubmit {
-                            Task { await search(query: searchText) }
-                        }
-                    if !searchText.isEmpty {
-                        Button {
-                            searchText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(AppTheme.muted.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(.white, in: RoundedRectangle(cornerRadius: 12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(AppTheme.olive.opacity(0.28), lineWidth: 1)
-                }
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
-                Button {
-                    Task { await search(query: searchText) }
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-                .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
-            }
+            candidateSearchField
             .padding(.bottom, 2)
             Label(candidate.area.isEmpty ? "主要地域なし" : candidate.area, systemImage: "mappin")
                 .font(.subheadline.weight(.semibold))
@@ -1005,6 +959,52 @@ struct MapRegistrationOrganizerView: View {
         .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 12))
     }
 
+    private var candidateSearchField: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.olive)
+                TextField("候補の店舗名を検索", text: $searchText)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .submitLabel(.search)
+                    .onSubmit {
+                        Task { await search(query: searchText) }
+                    }
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.muted.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.white, in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(AppTheme.olive.opacity(0.28), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+            Button {
+                Task { await search(query: searchText) }
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
+        }
+    }
+
     @MainActor
     private func search(query: String) async {
         isSearching = true
@@ -1017,10 +1017,9 @@ struct MapRegistrationOrganizerView: View {
             let response = try await MKLocalSearch(request: request).start()
             candidates = response.mapItems.prefix(8).map(LocationSearchCandidate.init)
             selectedCandidateIndex = 0
-            if candidates.isEmpty { message = "候補が見つかりませんでした。検索語を変えてください。" }
         } catch {
             candidates = []
-            message = "検索できませんでした。通信環境を確認してください。"
+            selectedCandidateIndex = 0
         }
     }
 
@@ -2030,6 +2029,7 @@ struct StoreFormView: View {
     @MainActor
     private func searchLocation(query: String? = nil) async {
         isSearchingLocation = true
+        validationMessage = nil
         defer { isSearchingLocation = false }
 
         let request = MKLocalSearch.Request()
@@ -2039,11 +2039,8 @@ struct StoreFormView: View {
         do {
             let response = try await MKLocalSearch(request: request).start()
             locationCandidates = response.mapItems.prefix(5).map(LocationSearchCandidate.init)
-            if locationCandidates.isEmpty {
-                validationMessage = "場所の候補が見つかりませんでした。店名やエリアを確認してください。"
-            }
         } catch {
-            validationMessage = "場所を検索できませんでした。通信環境を確認してください。"
+            locationCandidates = []
         }
     }
 
