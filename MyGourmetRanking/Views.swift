@@ -1108,7 +1108,7 @@ struct MapRegistrationOrganizerView: View {
                     .foregroundStyle(AppTheme.ink)
                     .submitLabel(.search)
                     .onSubmit {
-                        Task { await search(query: visibleSearchText, store: currentStore) }
+                        Task { await searchManually() }
                     }
                 if !visibleSearchText.isEmpty {
                     Button {
@@ -1130,7 +1130,7 @@ struct MapRegistrationOrganizerView: View {
             }
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
             Button {
-                Task { await search(query: visibleSearchText, store: currentStore) }
+                Task { await searchManually() }
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.caption.weight(.bold))
@@ -1147,6 +1147,8 @@ struct MapRegistrationOrganizerView: View {
     private func search(query: String, store: Store? = nil) async {
         isSearching = true
         message = nil
+        candidates = []
+        selectedCandidateIndex = 0
         defer { isSearching = false }
 
         let displayQuery = searchDisplayText(query, store: store)
@@ -1157,6 +1159,21 @@ struct MapRegistrationOrganizerView: View {
         }
         candidates = await searchLocationCandidates(queries: queries, region: searchRegion, limit: 8)
         selectedCandidateIndex = 0
+    }
+
+    @MainActor
+    private func searchManually() async {
+        let query = visibleSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return }
+
+        isSearching = true
+        message = nil
+        candidates = []
+        selectedCandidateIndex = 0
+        defer { isSearching = false }
+
+        searchText = query
+        candidates = await searchLocationCandidates(queries: [query], region: searchRegion, limit: 8)
     }
 
     private func resetSearch() {
