@@ -970,7 +970,7 @@ struct MapRegistrationOrganizerView: View {
                     }
                     .background(AppBackgroundView())
                     .task(id: store.id) {
-                        searchText = store.name
+                        searchText = displaySearchName(for: store)
                         await search(query: searchText, store: store)
                     }
                 } else {
@@ -1132,6 +1132,34 @@ struct MapRegistrationOrganizerView: View {
             .replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: "　", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func displaySearchName(for store: Store) -> String {
+        var parts = store.name
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
+        let areaTokens = Set(
+            (store.area ?? "")
+                .split(whereSeparator: { $0.isWhitespace || $0 == "・" || $0 == "," || $0 == "、" })
+                .map(String.init)
+        )
+
+        while let last = parts.last, isSearchAreaToken(last, areaTokens: areaTokens) {
+            parts.removeLast()
+        }
+
+        let cleaned = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? store.name : cleaned
+    }
+
+    private func isSearchAreaToken(_ token: String, areaTokens: Set<String>) -> Bool {
+        if areaTokens.contains(token) {
+            return true
+        }
+        if token == "東京" || token == "東京都" {
+            return true
+        }
+        return ["都", "道", "府", "県", "市", "区", "町", "村"].contains { token.hasSuffix($0) }
     }
 }
 
