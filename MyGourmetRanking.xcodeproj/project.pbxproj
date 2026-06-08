@@ -15,6 +15,7 @@
 		7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010016 /* Views.swift */; };
 		7D2B7C8A2C7A4F5100010007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */; };
 		7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */; };
+		7D2B7C8A2C7A4F5100010009 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +28,7 @@
 		7D2B7C8A2C7A4F5100010016 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStorage.swift; sourceTree = "<group>"; };
+		7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +60,7 @@
 				7D2B7C8A2C7A4F5100010015 /* GourmetDataStore.swift */,
 				7D2B7C8A2C7A4F5100010016 /* Views.swift */,
 				7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */,
+				7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */,
 				7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */,
 			);
 			path = MyGourmetRanking;
@@ -148,6 +151,7 @@
 				7D2B7C8A2C7A4F5100010005 /* GourmetDataStore.swift in Sources */,
 				7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */,
 				7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */,
+				7D2B7C8A2C7A4F5100010009 /* LocationManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,6 +286,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地周辺の飲食店候補を検索して、グルメMapへ登録するために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -314,6 +319,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地周辺の飲食店候補を検索して、グルメMapへ登録するために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

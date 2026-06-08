@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import UIKit
 import MapKit
+import CoreLocation
 
 enum AppTheme {
     static let background = Color(hex: "FBF9F3")
@@ -503,6 +504,7 @@ private enum GourmetMapFilterSheet: String, Identifiable {
 
 struct GourmetMapView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
+    @StateObject private var locationManager = LocationManager()
     @State private var selectedMainGenreId: String?
     @State private var selectedSubGenreId: String?
     @State private var selectedRank: StoreRank?
@@ -510,6 +512,9 @@ struct GourmetMapView: View {
     @State private var selectedStoreId: String?
     @State private var detailSeed: StoreDetailSeed?
     @State private var isOrganizerPresented = false
+    @State private var isNearbyRegistrationPresented = false
+    @State private var nearbyStoreCandidate: LocationSearchCandidate?
+    @State private var nearbyFormSeed: StoreFormSeed?
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
@@ -590,6 +595,24 @@ struct GourmetMapView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 12)
                 }
+
+                HStack {
+                    Spacer()
+                    Button {
+                        isNearbyRegistrationPresented = true
+                    } label: {
+                        Label("近くで登録", systemImage: "location.fill")
+                            .font(.subheadline.weight(.black))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 11)
+                            .background(AppTheme.tomato, in: Capsule())
+                            .shadow(color: AppTheme.tomato.opacity(0.25), radius: 8, y: 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, selectedStore == nil ? 14 : 110)
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 mapFilterBar
@@ -633,7 +656,28 @@ struct GourmetMapView: View {
                     .environmentObject(dataStore)
             }
             .sheet(isPresented: $isOrganizerPresented) {
-                MapRegistrationOrganizerView()
+                MapRegistrationOrganizerView(searchRegion: currentSearchRegion)
+                    .environmentObject(dataStore)
+            }
+            .sheet(isPresented: $isNearbyRegistrationPresented) {
+                NearbyStorePickerView(
+                    locationManager: locationManager,
+                    fallbackRegion: currentSearchRegion
+                ) { candidate in
+                    nearbyStoreCandidate = candidate
+                    isNearbyRegistrationPresented = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        nearbyFormSeed = StoreFormSeed(
+                            store: nil,
+                            mainGenreId: dataStore.sortedMainGenres.first?.id ?? "",
+                            subGenreId: dataStore.sortedMainGenres.first.flatMap { dataStore.subGenres(for: $0.id).first?.id } ?? "",
+                            rank: .archive
+                        )
+                    }
+                }
+            }
+            .sheet(item: $nearbyFormSeed) { seed in
+                StoreFormView(seed: seed, locationCandidate: nearbyStoreCandidate)
                     .environmentObject(dataStore)
             }
             .sheet(item: $presentedFilterSheet) { sheet in
@@ -649,7 +693,23 @@ struct GourmetMapView: View {
                 }
             }
             .onChange(of: mappedStores.map(\.id)) { _, _ in clearHiddenSelection() }
+            .task {
+                locationManager.requestLocation()
+            }
         }
+    }
+
+    private var currentSearchRegion: MKCoordinateRegion {
+        if let coordinate = locationManager.location?.coordinate {
+            return MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+            )
+        }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
+            span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
+        )
     }
 
     private var mapFilterBar: some View {
@@ -818,6 +878,8 @@ private struct GourmetMapRankFilterSheet: View {
 struct MapRegistrationOrganizerView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
     @Environment(\.dismiss) private var dismiss
+    let searchRegion: MKCoordinateRegion
+
     @State private var skippedStoreIds: Set<String> = []
     @State private var candidates: [LocationSearchCandidate] = []
     @State private var selectedCandidateIndex = 0
@@ -909,7 +971,7 @@ struct MapRegistrationOrganizerView: View {
                     .background(AppBackgroundView())
                     .task(id: store.id) {
                         searchText = [store.name, store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
-                        await search(query: searchText)
+                        await search(query: searchText, store: store)
                     }
                 } else {
                     ContentUnavailableView(
@@ -970,7 +1032,7 @@ struct MapRegistrationOrganizerView: View {
                     .foregroundStyle(AppTheme.ink)
                     .submitLabel(.search)
                     .onSubmit {
-                        Task { await search(query: searchText) }
+                        Task { await search(query: searchText, store: currentStore) }
                     }
                 if !searchText.isEmpty {
                     Button {
@@ -992,7 +1054,7 @@ struct MapRegistrationOrganizerView: View {
             }
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
             Button {
-                Task { await search(query: searchText) }
+                Task { await search(query: searchText, store: currentStore) }
             } label: {
                 Image(systemName: "magnifyingglass")
                     .font(.subheadline.weight(.bold))
@@ -1006,21 +1068,18 @@ struct MapRegistrationOrganizerView: View {
     }
 
     @MainActor
-    private func search(query: String) async {
+    private func search(query: String, store: Store? = nil) async {
         isSearching = true
         message = nil
         defer { isSearching = false }
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
-        request.resultTypes = .pointOfInterest
-        do {
-            let response = try await MKLocalSearch(request: request).start()
-            candidates = response.mapItems.prefix(8).map(LocationSearchCandidate.init)
-            selectedCandidateIndex = 0
-        } catch {
-            candidates = []
-            selectedCandidateIndex = 0
+
+        var queries = [query]
+        if let store {
+            queries.append([store.name, store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " "))
+            queries.append(store.name)
         }
+        candidates = await searchLocationCandidates(queries: queries, region: searchRegion, limit: 8)
+        selectedCandidateIndex = 0
     }
 
     private func resetSearch() {
@@ -1028,6 +1087,155 @@ struct MapRegistrationOrganizerView: View {
         selectedCandidateIndex = 0
         searchText = ""
         message = nil
+    }
+}
+
+struct NearbyStorePickerView: View {
+    @ObservedObject var locationManager: LocationManager
+    let fallbackRegion: MKCoordinateRegion
+    let onSelect: (LocationSearchCandidate) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+    @State private var candidates: [LocationSearchCandidate] = []
+    @State private var isSearching = false
+
+    private var currentRegion: MKCoordinateRegion {
+        if let coordinate = locationManager.location?.coordinate {
+            return MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.025)
+            )
+        }
+        return fallbackRegion
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("近くのお店から登録")
+                            .font(.title3.weight(.black))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(locationManager.location == nil ? "現在地が使えない場合は、表示中のMap範囲から候補を探します。" : "現在地周辺の飲食店を候補として表示します。")
+                            .font(.footnote)
+                            .foregroundStyle(AppTheme.softText)
+                    }
+
+                    HStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(AppTheme.olive)
+                            TextField("店名・駅名・住所で検索", text: $searchText)
+                                .submitLabel(.search)
+                                .onSubmit {
+                                    Task { await searchNearby() }
+                                }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 11)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(AppTheme.olive.opacity(0.25), lineWidth: 1)
+                        }
+
+                        Button {
+                            Task { await searchNearby() }
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.subheadline.weight(.bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 42, height: 42)
+                                .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isSearching)
+                    }
+
+                    if isSearching {
+                        ProgressView("候補を検索中...")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                    } else if candidates.isEmpty {
+                        ContentUnavailableView(
+                            "候補がまだありません",
+                            systemImage: "location.magnifyingglass",
+                            description: Text("店名で検索するか、現在地周辺の候補を再検索してください。")
+                        )
+                        .padding(.vertical, 20)
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(candidates) { candidate in
+                                Button {
+                                    onSelect(candidate)
+                                    dismiss()
+                                } label: {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        Image(systemName: "mappin.and.ellipse")
+                                            .font(.title3.weight(.bold))
+                                            .foregroundStyle(AppTheme.tomato)
+                                            .frame(width: 32, height: 32)
+                                            .background(AppTheme.tomato.opacity(0.1), in: Circle())
+                                        VStack(alignment: .leading, spacing: 5) {
+                                            Text(candidate.name)
+                                                .font(.headline.weight(.black))
+                                                .foregroundStyle(AppTheme.ink)
+                                            Text(candidate.area.isEmpty ? "主要地域なし" : candidate.area)
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(AppTheme.softText)
+                                            Text(candidate.address)
+                                                .font(.caption)
+                                                .foregroundStyle(AppTheme.muted)
+                                                .lineLimit(2)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.black))
+                                            .foregroundStyle(AppTheme.muted)
+                                            .padding(.top, 6)
+                                    }
+                                    .padding(14)
+                                    .background(AppTheme.card, in: RoundedRectangle(cornerRadius: 14))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding(18)
+            }
+            .background(AppBackgroundView())
+            .navigationTitle("近くで登録")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("再検索") {
+                        Task { await searchNearby(forceNearby: true) }
+                    }
+                    .disabled(isSearching)
+                }
+            }
+            .task {
+                locationManager.requestLocation()
+                await searchNearby(forceNearby: true)
+            }
+        }
+    }
+
+    @MainActor
+    private func searchNearby(forceNearby: Bool = false) async {
+        isSearching = true
+        defer { isSearching = false }
+
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let queries = trimmed.isEmpty || forceNearby ? ["レストラン", "飲食店", "カフェ"] : [trimmed, "\(trimmed) レストラン"]
+        candidates = await searchLocationCandidates(queries: queries, region: currentRegion, limit: 12)
     }
 }
 
@@ -1747,6 +1955,7 @@ struct StoreFormView: View {
     @Environment(\.dismiss) private var dismiss
 
     private let seed: StoreFormSeed
+    private let initialLocationCandidate: LocationSearchCandidate?
     @State private var name: String
     @State private var mainGenreId: String
     @State private var subGenreId: String
@@ -1765,19 +1974,20 @@ struct StoreFormView: View {
     @State private var manualLocationQuery = ""
     @State private var validationMessage: String?
 
-    init(seed: StoreFormSeed) {
+    init(seed: StoreFormSeed, locationCandidate: LocationSearchCandidate? = nil) {
         self.seed = seed
-        _name = State(initialValue: seed.store?.name ?? "")
+        initialLocationCandidate = locationCandidate
+        _name = State(initialValue: seed.store?.name ?? locationCandidate?.name ?? "")
         _mainGenreId = State(initialValue: seed.store?.mainGenreId ?? seed.mainGenreId)
         _subGenreId = State(initialValue: seed.store?.subGenreId ?? seed.subGenreId)
         _rank = State(initialValue: seed.store?.rank ?? seed.rank)
-        _area = State(initialValue: seed.store?.area ?? "")
+        _area = State(initialValue: seed.store?.area ?? locationCandidate?.area ?? "")
         _legacyImageUrl = State(initialValue: seed.store?.imageUrl ?? "")
         _photoDrafts = State(initialValue: (seed.store?.imageFileNames ?? []).map(PhotoDraft.init(fileName:)))
         _memo = State(initialValue: seed.store?.memo ?? "")
-        _mapUrl = State(initialValue: seed.store?.mapUrl ?? "")
-        _latitude = State(initialValue: seed.store?.latitude)
-        _longitude = State(initialValue: seed.store?.longitude)
+        _mapUrl = State(initialValue: seed.store?.mapUrl ?? locationCandidate?.mapUrl ?? "")
+        _latitude = State(initialValue: seed.store?.latitude ?? locationCandidate?.coordinate.latitude)
+        _longitude = State(initialValue: seed.store?.longitude ?? locationCandidate?.coordinate.longitude)
     }
 
     private var availableSubGenres: [SubGenre] {
@@ -2032,16 +2242,35 @@ struct StoreFormView: View {
         validationMessage = nil
         defer { isSearchingLocation = false }
 
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query ?? [name, area].filter { !$0.isEmpty }.joined(separator: " ")
-        request.resultTypes = .pointOfInterest
-
-        do {
-            let response = try await MKLocalSearch(request: request).start()
-            locationCandidates = response.mapItems.prefix(5).map(LocationSearchCandidate.init)
-        } catch {
-            locationCandidates = []
+        let trimmedQuery = query?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseQuery = trimmedQuery?.isEmpty == false ? trimmedQuery! : [name, area].filter { !$0.isEmpty }.joined(separator: " ")
+        var queries = [baseQuery]
+        if !area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queries.append([name, area].filter { !$0.isEmpty }.joined(separator: " "))
         }
+        queries.append(name)
+
+        locationCandidates = await searchLocationCandidates(
+            queries: queries,
+            region: locationSearchRegion,
+            limit: 5
+        )
+    }
+
+    private var locationSearchRegion: MKCoordinateRegion? {
+        if let latitude, let longitude {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
+        if let coordinate = initialLocationCandidate?.coordinate {
+            return MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
+        return nil
     }
 
     private func applyLocation(_ candidate: LocationSearchCandidate) {
@@ -2104,6 +2333,57 @@ struct LocationSearchCandidate: Identifiable {
     var encodedName: String {
         name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
     }
+
+    var mapUrl: String {
+        "https://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)&q=\(encodedName)"
+    }
+
+    var dedupeKey: String {
+        "\(name.lowercased())|\(address.lowercased())"
+    }
+}
+
+@MainActor
+private func searchLocationCandidates(
+    queries: [String],
+    region: MKCoordinateRegion?,
+    limit: Int
+) async -> [LocationSearchCandidate] {
+    var results: [LocationSearchCandidate] = []
+    var seenKeys: Set<String> = []
+
+    for rawQuery in queries {
+        let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { continue }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = .pointOfInterest
+        if let region {
+            request.region = region
+        }
+
+        guard let response = try? await MKLocalSearch(request: request).start() else {
+            continue
+        }
+
+        for mapItem in response.mapItems {
+            let candidate = LocationSearchCandidate(mapItem: mapItem)
+            guard seenKeys.insert(candidate.dedupeKey).inserted else { continue }
+            results.append(candidate)
+        }
+    }
+
+    if let region {
+        let center = CLLocation(latitude: region.center.latitude, longitude: region.center.longitude)
+        results.sort {
+            let first = CLLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
+            let second = CLLocation(latitude: $1.coordinate.latitude, longitude: $1.coordinate.longitude)
+            return first.distance(from: center) < second.distance(from: center)
+        }
+    }
+
+    return Array(results.prefix(limit))
 }
 
 struct StoreDetailView: View {
