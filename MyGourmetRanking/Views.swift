@@ -808,6 +808,7 @@ struct MapRegistrationOrganizerView: View {
                 Marker(candidate.name, coordinate: candidate.coordinate)
                     .tint(AppTheme.tomato)
             }
+            .id(candidate.id)
             .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .allowsHitTesting(false)
