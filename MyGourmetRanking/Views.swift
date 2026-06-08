@@ -1036,33 +1036,45 @@ struct GourmetMapPin: View {
     let store: Store
     let isSelected: Bool
 
+    private var accent: Color {
+        store.rank == .archive ? AppTheme.olive : AppTheme.tomato
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                Circle()
-                    .fill(store.rank == .archive ? AppTheme.olive : AppTheme.tomato)
+        VStack(spacing: -1) {
+            HStack(spacing: 4) {
                 if let rank = store.rank.numericValue {
                     Text("\(rank)")
-                        .font(.system(size: 15, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.caption.weight(.black))
+                    Text("位")
+                        .font(.system(size: 8, weight: .black))
                 } else {
-                    Image(systemName: "archivebox.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
+                    Image(systemName: "archivebox")
+                        .font(.caption.weight(.black))
                 }
             }
-            .frame(width: isSelected ? 42 : 36, height: isSelected ? 42 : 36)
+            .foregroundStyle(isSelected ? .white : accent)
+            .padding(.horizontal, store.rank == .archive ? 9 : 10)
+            .padding(.vertical, 6)
+            .background(isSelected ? accent : AppTheme.card, in: RoundedRectangle(cornerRadius: 8))
             .overlay {
-                Circle().stroke(.white, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(accent.opacity(isSelected ? 0 : 0.45), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.22), radius: 5, y: 3)
+            .shadow(color: .black.opacity(isSelected ? 0.18 : 0.1), radius: isSelected ? 5 : 3, y: 2)
 
             Image(systemName: "triangle.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(store.rank == .archive ? AppTheme.olive : AppTheme.tomato)
+                .font(.system(size: 8))
+                .foregroundStyle(isSelected ? accent : AppTheme.card)
                 .rotationEffect(.degrees(180))
-                .offset(y: -3)
+                .overlay {
+                    Image(systemName: "triangle")
+                        .font(.system(size: 8))
+                        .foregroundStyle(accent.opacity(isSelected ? 1 : 0.45))
+                        .rotationEffect(.degrees(180))
+                }
         }
+        .scaleEffect(isSelected ? 1.08 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
     }
 }
