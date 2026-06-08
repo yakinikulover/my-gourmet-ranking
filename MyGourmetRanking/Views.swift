@@ -886,6 +886,7 @@ struct MapRegistrationOrganizerView: View {
     @State private var searchText = ""
     @State private var isSearching = false
     @State private var message: String?
+    @State private var pendingRenameCandidate: LocationSearchCandidate?
 
     private var unresolvedStores: [Store] {
         dataStore.stores.filter { $0.coordinate == nil && !skippedStoreIds.contains($0.id) }
@@ -951,8 +952,7 @@ struct MapRegistrationOrganizerView: View {
                                 }
 
                                 Button {
-                                    dataStore.updateStoreLocation(store.id, candidate: candidate)
-                                    resetSearch()
+                                    save(candidate, for: store)
                                 } label: {
                                     Label("この場所で保存", systemImage: "checkmark.circle.fill")
                                         .frame(maxWidth: .infinity)
@@ -970,7 +970,7 @@ struct MapRegistrationOrganizerView: View {
                     }
                     .background(AppBackgroundView())
                     .task(id: store.id) {
-                        searchText = [store.name, store.area ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
+                        searchText = store.name
                         await search(query: searchText, store: store)
                     }
                 } else {
@@ -986,6 +986,34 @@ struct MapRegistrationOrganizerView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("閉じる") { dismiss() }
+                }
+            }
+            .confirmationDialog(
+                "店舗名をMap上の名前に合わせますか？",
+                isPresented: Binding(
+                    get: { pendingRenameCandidate != nil },
+                    set: { if !$0 { pendingRenameCandidate = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                if let store = currentStore, let candidate = pendingRenameCandidate {
+                    Button("「\(candidate.name)」に変更して保存") {
+                        dataStore.updateStoreLocation(store.id, candidate: candidate, renameToCandidate: true)
+                        pendingRenameCandidate = nil
+                        resetSearch()
+                    }
+                    Button("登録名は変えずに保存") {
+                        dataStore.updateStoreLocation(store.id, candidate: candidate)
+                        pendingRenameCandidate = nil
+                        resetSearch()
+                    }
+                }
+                Button("キャンセル", role: .cancel) {
+                    pendingRenameCandidate = nil
+                }
+            } message: {
+                if let store = currentStore, let candidate = pendingRenameCandidate {
+                    Text("登録名「\(store.name)」とMap上の名前「\(candidate.name)」が違います。")
                 }
             }
         }
@@ -1028,7 +1056,7 @@ struct MapRegistrationOrganizerView: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(AppTheme.olive)
                 TextField("候補の店舗名を検索", text: $searchText)
-                    .font(.title3.weight(.bold))
+                    .font(.headline.weight(.bold))
                     .foregroundStyle(AppTheme.ink)
                     .submitLabel(.search)
                     .onSubmit {
@@ -1046,7 +1074,7 @@ struct MapRegistrationOrganizerView: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(.white, in: RoundedRectangle(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
@@ -1057,9 +1085,9 @@ struct MapRegistrationOrganizerView: View {
                 Task { await search(query: searchText, store: currentStore) }
             } label: {
                 Image(systemName: "magnifyingglass")
-                    .font(.subheadline.weight(.bold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
+                    .frame(width: 34, height: 34)
                     .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
@@ -1087,6 +1115,23 @@ struct MapRegistrationOrganizerView: View {
         selectedCandidateIndex = 0
         searchText = ""
         message = nil
+    }
+
+    private func save(_ candidate: LocationSearchCandidate, for store: Store) {
+        if normalizedName(store.name) == normalizedName(candidate.name) {
+            dataStore.updateStoreLocation(store.id, candidate: candidate)
+            resetSearch()
+        } else {
+            pendingRenameCandidate = candidate
+        }
+    }
+
+    private func normalizedName(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "　", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

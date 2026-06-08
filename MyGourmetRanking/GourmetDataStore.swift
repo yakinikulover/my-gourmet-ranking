@@ -95,8 +95,11 @@ final class GourmetDataStore: ObservableObject {
         ImageStorage.deleteImages(imageFileNames)
     }
 
-    func updateStoreLocation(_ storeId: String, candidate: LocationSearchCandidate) {
+    func updateStoreLocation(_ storeId: String, candidate: LocationSearchCandidate, renameToCandidate: Bool = false) {
         guard let index = stores.firstIndex(where: { $0.id == storeId }) else { return }
+        if renameToCandidate {
+            stores[index].name = candidate.name
+        }
         stores[index].latitude = candidate.coordinate.latitude
         stores[index].longitude = candidate.coordinate.longitude
         if stores[index].area?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true {
