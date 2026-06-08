@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7D2B7C8A2C7A4F5100010007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */; };
 		7D2B7C8A2C7A4F5100010001 /* MyGourmetRankingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010011 /* MyGourmetRankingApp.swift */; };
 		7D2B7C8A2C7A4F5100010002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010012 /* Models.swift */; };
 		7D2B7C8A2C7A4F5100010003 /* InitialGenres.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010013 /* InitialGenres.swift */; };
 		7D2B7C8A2C7A4F5100010004 /* RankingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010014 /* RankingEngine.swift */; };
 		7D2B7C8A2C7A4F5100010005 /* GourmetDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010015 /* GourmetDataStore.swift */; };
 		7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010016 /* Views.swift */; };
+		7D2B7C8A2C7A4F5100010007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */; };
 		7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */; };
 /* End PBXBuildFile section */
 
@@ -274,11 +274,11 @@
 		7D2B7C8A2C7A4F51000100B0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = NL945Q9D64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
@@ -306,11 +306,11 @@
 		7D2B7C8A2C7A4F51000100B1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = NL945Q9D64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
