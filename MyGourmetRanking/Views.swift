@@ -714,19 +714,6 @@ struct MapRegistrationOrganizerView: View {
                                 .font(.title3.weight(.bold))
                                 .foregroundStyle(AppTheme.olive)
 
-                            HStack {
-                                TextField("店名・駅名・住所で再検索", text: $searchText)
-                                    .textFieldStyle(.roundedBorder)
-                                Button {
-                                    Task { await search(query: searchText) }
-                                } label: {
-                                    Image(systemName: "magnifyingglass")
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .tint(AppTheme.ink)
-                                .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
-                            }
-
                             if let message {
                                 Text(message)
                                     .font(.footnote)
@@ -791,9 +778,27 @@ struct MapRegistrationOrganizerView: View {
             Text("候補の店舗")
                 .font(.caption.weight(.black))
                 .foregroundStyle(AppTheme.olive)
-            Text(candidate.name)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(AppTheme.ink)
+            HStack(spacing: 8) {
+                TextField("候補の店舗名を検索", text: $searchText)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .submitLabel(.search)
+                    .onSubmit {
+                        Task { await search(query: searchText) }
+                    }
+                Button {
+                    Task { await search(query: searchText) }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(AppTheme.ink, in: RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+                .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching)
+            }
+            .padding(.bottom, 2)
             Label(candidate.area.isEmpty ? "主要地域なし" : candidate.area, systemImage: "mappin")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(AppTheme.softText)
