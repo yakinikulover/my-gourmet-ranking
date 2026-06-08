@@ -73,6 +73,8 @@ final class GourmetDataStore: ObservableObject {
             imageUrl: normalizedOptional(formData.imageUrl),
             imageFileNames: formData.imageFileNames.isEmpty ? nil : formData.imageFileNames,
             mapUrl: normalizedOptional(formData.mapUrl),
+            latitude: formData.latitude,
+            longitude: formData.longitude,
             createdAt: existingStore?.createdAt ?? timestamp,
             updatedAt: timestamp
         )

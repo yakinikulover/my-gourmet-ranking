@@ -49,6 +49,8 @@ struct Store: Identifiable, Codable, Equatable {
     var imageUrl: String?
     var imageFileNames: [String]? = nil
     var mapUrl: String?
+    var latitude: Double? = nil
+    var longitude: Double? = nil
     var createdAt: Date
     var updatedAt: Date
 }
@@ -80,6 +82,8 @@ struct StoreFormData {
     var imageUrl: String
     var imageFileNames: [String]
     var mapUrl: String
+    var latitude: Double?
+    var longitude: Double?
 }
 
 enum BestRankRow: Identifiable {

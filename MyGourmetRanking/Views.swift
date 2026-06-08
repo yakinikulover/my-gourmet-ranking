@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import MapKit
 
 enum AppTheme {
     static let background = Color(hex: "FBF9F3")
@@ -83,6 +84,28 @@ extension View {
 }
 
 struct ContentView: View {
+    var body: some View {
+        TabView {
+            HomeView()
+                .tabItem {
+                    Label("ホーム", systemImage: "list.star")
+                }
+
+            GourmetMapView()
+                .tabItem {
+                    Label("グルメMap", systemImage: "map")
+                }
+
+            SettingsView()
+                .tabItem {
+                    Label("設定", systemImage: "slider.horizontal.3")
+                }
+        }
+        .tint(AppTheme.tomato)
+    }
+}
+
+struct HomeView: View {
     @EnvironmentObject private var dataStore: GourmetDataStore
     @State private var selectedMainGenreId = ""
     @State private var selectedSubGenreId = ""
@@ -255,20 +278,7 @@ struct ContentView: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                DashedDivider()
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppTheme.softText)
-                        .frame(width: 30, height: 30)
-                        .background(AppTheme.softFill)
-                        .clipShape(Circle())
-                }
-                .accessibilityLabel("設定")
-            }
+            DashedDivider()
         }
     }
 
@@ -481,6 +491,195 @@ struct FilterToken: View {
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(AppTheme.muted)
         }
+    }
+}
+
+enum GourmetMapFilter: String, CaseIterable, Identifiable {
+    case all = "すべて"
+    case best = "Best5"
+    case archive = "Archive"
+
+    var id: String { rawValue }
+}
+
+struct GourmetMapView: View {
+    @EnvironmentObject private var dataStore: GourmetDataStore
+    @State private var filter: GourmetMapFilter = .all
+    @State private var selectedStoreId: String?
+    @State private var detailSeed: StoreDetailSeed?
+    @State private var cameraPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 35.6812, longitude: 139.7671),
+            span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18)
+        )
+    )
+
+    private var mappedStores: [Store] {
+        dataStore.stores.filter { store in
+            guard store.coordinate != nil else { return false }
+            switch filter {
+            case .all:
+                return true
+            case .best:
+                return store.rank != .archive
+            case .archive:
+                return store.rank == .archive
+            }
+        }
+    }
+
+    private var selectedStore: Store? {
+        dataStore.stores.first { $0.id == selectedStoreId }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Map(position: $cameraPosition, selection: $selectedStoreId) {
+                    ForEach(mappedStores) { store in
+                        if let coordinate = store.coordinate {
+                            Annotation(store.name, coordinate: coordinate) {
+                                GourmetMapPin(store: store, isSelected: selectedStoreId == store.id)
+                            }
+                            .tag(store.id)
+                        }
+                    }
+                }
+                .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                .ignoresSafeArea(edges: .bottom)
+
+                if mappedStores.isEmpty {
+                    ContentUnavailableView(
+                        "地図登録済みの店舗がありません",
+                        systemImage: "map",
+                        description: Text("店舗の登録・編集画面から場所を検索すると、ここにピンが表示されます。")
+                    )
+                    .padding(24)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+                    .padding()
+                }
+
+                if let selectedStore {
+                    Button {
+                        detailSeed = StoreDetailSeed(id: selectedStore.id)
+                    } label: {
+                        GourmetMapStoreCard(store: selectedStore)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                mapFilterBar
+            }
+            .navigationTitle("グルメMap")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(item: $detailSeed) { seed in
+                StoreDetailView(storeId: seed.id)
+                    .environmentObject(dataStore)
+            }
+            .onChange(of: filter) { _, _ in
+                if let selectedStoreId, !mappedStores.contains(where: { $0.id == selectedStoreId }) {
+                    self.selectedStoreId = nil
+                }
+            }
+        }
+    }
+
+    private var mapFilterBar: some View {
+        HStack(spacing: 8) {
+            ForEach(GourmetMapFilter.allCases) { option in
+                Button {
+                    filter = option
+                } label: {
+                    Text(option.rawValue)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(filter == option ? .white : AppTheme.ink)
+                        .padding(.horizontal, 15)
+                        .padding(.vertical, 9)
+                        .background(filter == option ? AppTheme.ink : AppTheme.card)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+            Text("\(mappedStores.count)件")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.softText)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+    }
+}
+
+struct GourmetMapPin: View {
+    let store: Store
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle()
+                    .fill(store.rank == .archive ? AppTheme.olive : AppTheme.tomato)
+                if let rank = store.rank.numericValue {
+                    Text("\(rank)")
+                        .font(.system(size: 15, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                } else {
+                    Image(systemName: "archivebox.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(width: isSelected ? 42 : 36, height: isSelected ? 42 : 36)
+            .overlay {
+                Circle().stroke(.white, lineWidth: 3)
+            }
+            .shadow(color: .black.opacity(0.22), radius: 5, y: 3)
+
+            Image(systemName: "triangle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(store.rank == .archive ? AppTheme.olive : AppTheme.tomato)
+                .rotationEffect(.degrees(180))
+                .offset(y: -3)
+        }
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isSelected)
+    }
+}
+
+struct GourmetMapStoreCard: View {
+    @EnvironmentObject private var dataStore: GourmetDataStore
+    let store: Store
+
+    var body: some View {
+        HStack(spacing: 13) {
+            ThumbnailView(source: store.primaryImageSource, name: store.name, size: 72)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(store.rank.label)
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(store.rank == .archive ? AppTheme.olive : AppTheme.tomato)
+                Text(store.name)
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
+                Label(store.area ?? "エリア未登録", systemImage: "mappin")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.softText)
+                Text(dataStore.subGenreName(for: store.subGenreId))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(AppTheme.muted)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(AppTheme.muted)
+        }
+        .padding(12)
+        .background(AppTheme.card.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: AppTheme.ink.opacity(0.14), radius: 12, y: 5)
     }
 }
 
@@ -735,6 +934,11 @@ extension Store {
 
     var primaryImageSource: StoreImageSource? {
         imageSources.first
+    }
+
+    var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
@@ -1133,6 +1337,10 @@ struct StoreFormView: View {
     @State private var isImportingPhotos = false
     @State private var memo: String
     @State private var mapUrl: String
+    @State private var latitude: Double?
+    @State private var longitude: Double?
+    @State private var locationCandidates: [LocationSearchCandidate] = []
+    @State private var isSearchingLocation = false
     @State private var validationMessage: String?
 
     init(seed: StoreFormSeed) {
@@ -1146,6 +1354,8 @@ struct StoreFormView: View {
         _photoDrafts = State(initialValue: (seed.store?.imageFileNames ?? []).map(PhotoDraft.init(fileName:)))
         _memo = State(initialValue: seed.store?.memo ?? "")
         _mapUrl = State(initialValue: seed.store?.mapUrl ?? "")
+        _latitude = State(initialValue: seed.store?.latitude)
+        _longitude = State(initialValue: seed.store?.longitude)
     }
 
     private var availableSubGenres: [SubGenre] {
@@ -1221,6 +1431,45 @@ struct StoreFormView: View {
                     TextField("Google Map URL", text: $mapUrl, axis: .vertical)
                     TextField("一言メモ", text: $memo, axis: .vertical)
                         .lineLimit(3...6)
+                }
+
+                Section("グルメMap") {
+                    Button {
+                        Task { await searchLocation() }
+                    } label: {
+                        Label(isSearchingLocation ? "検索中..." : "店名とエリアから場所を検索", systemImage: "map")
+                    }
+                    .disabled(isSearchingLocation || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                    if latitude != nil, longitude != nil {
+                        Label("グルメMapに表示されます", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.olive)
+                        Button("地図から外す", role: .destructive) {
+                            latitude = nil
+                            longitude = nil
+                            locationCandidates = []
+                        }
+                    } else {
+                        Text("候補を選ぶと、グルメMapに店舗ピンが表示されます。")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.softText)
+                    }
+
+                    ForEach(locationCandidates) { candidate in
+                        Button {
+                            applyLocation(candidate)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(candidate.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(AppTheme.ink)
+                                Text(candidate.address)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.softText)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                 }
 
                 Section("写真") {
@@ -1331,7 +1580,9 @@ struct StoreFormView: View {
                 memo: memo,
                 imageUrl: imageFileNames.isEmpty ? legacyImageUrl : "",
                 imageFileNames: imageFileNames,
-                mapUrl: mapUrl
+                mapUrl: mapUrl,
+                latitude: latitude,
+                longitude: longitude
             ),
             editingStoreId: seed.store?.id
         )
@@ -1343,6 +1594,38 @@ struct StoreFormView: View {
             return
         }
         rank = availableRankOptions.first { $0.numericValue != nil } ?? .archive
+    }
+
+    @MainActor
+    private func searchLocation() async {
+        isSearchingLocation = true
+        defer { isSearchingLocation = false }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = [name, area].filter { !$0.isEmpty }.joined(separator: " ")
+        request.resultTypes = .pointOfInterest
+
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            locationCandidates = response.mapItems.prefix(5).map(LocationSearchCandidate.init)
+            if locationCandidates.isEmpty {
+                validationMessage = "場所の候補が見つかりませんでした。店名やエリアを確認してください。"
+            }
+        } catch {
+            validationMessage = "場所を検索できませんでした。通信環境を確認してください。"
+        }
+    }
+
+    private func applyLocation(_ candidate: LocationSearchCandidate) {
+        latitude = candidate.coordinate.latitude
+        longitude = candidate.coordinate.longitude
+        if area.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            area = candidate.area
+        }
+        if mapUrl.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            mapUrl = "https://maps.apple.com/?ll=\(candidate.coordinate.latitude),\(candidate.coordinate.longitude)&q=\(candidate.encodedName)"
+        }
+        locationCandidates = []
     }
 
     @MainActor
@@ -1367,6 +1650,31 @@ struct StoreFormView: View {
 
         legacyImageUrl = ""
         photoDrafts.append(contentsOf: importedDrafts)
+    }
+}
+
+struct LocationSearchCandidate: Identifiable {
+    let id = UUID()
+    let name: String
+    let address: String
+    let area: String
+    let coordinate: CLLocationCoordinate2D
+
+    init(mapItem: MKMapItem) {
+        name = mapItem.name ?? "名称未登録"
+        coordinate = mapItem.placemark.coordinate
+        let parts = [
+            mapItem.placemark.administrativeArea,
+            mapItem.placemark.locality,
+            mapItem.placemark.subLocality,
+            mapItem.placemark.thoroughfare
+        ].compactMap { $0 }
+        address = parts.isEmpty ? "住所情報なし" : parts.joined(separator: " ")
+        area = [mapItem.placemark.locality, mapItem.placemark.subLocality].compactMap { $0 }.joined(separator: " ")
+    }
+
+    var encodedName: String {
+        name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
     }
 }
 
