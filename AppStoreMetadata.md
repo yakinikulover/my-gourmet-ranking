@@ -44,6 +44,7 @@ My Gourmet Rankingは、行った飲食店を自分の基準で記録できる�
 - Support URL: https://yakinikulover.github.io/my-gourmet-ranking/support.html
 - Privacy Policy URL: https://yakinikulover.github.io/my-gourmet-ranking/privacy.html
 - Terms URL: https://yakinikulover.github.io/my-gourmet-ranking/terms.html
+- Support Email: mysmallgoodapps@outlook.com
 
 ## スクリーンショット構成
 
@@ -60,4 +61,3 @@ My Gourmet Rankingは、行った飲食店を自分の基準で記録できる�
 - App Store Connectの買い切りPro商品
 - RevenueCat OfferingとEntitlement `pro`
 - Sandbox/TestFlightで購入・復元確認
-- 公開用メールアドレスへの差し替え

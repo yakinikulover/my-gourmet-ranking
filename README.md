@@ -44,7 +44,7 @@ xcodebuild -project MyGourmetRanking.xcodeproj \
 - [プライバシーポリシー](https://yakinikulover.github.io/my-gourmet-ranking/privacy.html)
 - [利用規約](https://yakinikulover.github.io/my-gourmet-ranking/terms.html)
 
-GitHub Pagesは `docs/` ディレクトリから公開します。公開用メールアドレスを用意した後、`docs/support.html`、`docs/privacy.html`、`docs/terms.html` の問い合わせ先を差し替えてください。
+GitHub Pagesは `docs/` ディレクトリから公開します。お問い合わせ先は `mysmallgoodapps@outlook.com` です。
 
 ## 公開前テスト
 
