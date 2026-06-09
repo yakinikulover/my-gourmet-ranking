@@ -86,6 +86,9 @@ extension View {
 
 struct ContentView: View {
     @AppStorage("hasCompletedOnboardingV3") private var hasCompletedOnboarding = false
+    @AppStorage("hasSeenIntroPaywallV1") private var hasSeenIntroPaywall = false
+    @EnvironmentObject private var proState: ProState
+    @State private var isIntroPaywallPresented = false
 
     var body: some View {
         Group {
@@ -96,8 +99,18 @@ struct ContentView: View {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
                         hasCompletedOnboarding = true
                     }
+                    if !proState.isPro, !hasSeenIntroPaywall {
+                        hasSeenIntroPaywall = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                            isIntroPaywallPresented = true
+                        }
+                    }
                 }
             }
+        }
+        .fullScreenCover(isPresented: $isIntroPaywallPresented) {
+            PaywallView(reason: .onboarding)
+                .environmentObject(proState)
         }
     }
 
