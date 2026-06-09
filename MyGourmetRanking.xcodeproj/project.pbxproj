@@ -20,6 +20,8 @@
 		7D2B7C8A2C7A4F510001000B /* ProState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001B /* ProState.swift */; };
 		7D2B7C8A2C7A4F510001000C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001C /* PaywallView.swift */; };
 		7D2B7C8A2C7A4F510001000D /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2B7C8A2C7A4F51000100D0 /* RevenueCat */; };
+		7D2B7C8A2C7A4F510001000E /* ProAccessPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */; };
+		7D2B7C8A2C7A4F510001000F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001E /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +38,8 @@
 		7D2B7C8A2C7A4F510001001A /* RevenueCatConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatConfig.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F510001001B /* ProState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProState.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F510001001C /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProAccessPolicy.swift; sourceTree = "<group>"; };
+		7D2B7C8A2C7A4F510001001E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +76,8 @@
 				7D2B7C8A2C7A4F510001001A /* RevenueCatConfig.swift */,
 				7D2B7C8A2C7A4F510001001B /* ProState.swift */,
 				7D2B7C8A2C7A4F510001001C /* PaywallView.swift */,
+				7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */,
+				7D2B7C8A2C7A4F510001001E /* PrivacyInfo.xcprivacy */,
 				7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */,
 			);
 			path = MyGourmetRanking;
@@ -151,6 +157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7D2B7C8A2C7A4F5100010007 /* Assets.xcassets in Resources */,
+				7D2B7C8A2C7A4F510001000F /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,6 +179,7 @@
 				7D2B7C8A2C7A4F510001000A /* RevenueCatConfig.swift in Sources */,
 				7D2B7C8A2C7A4F510001000B /* ProState.swift in Sources */,
 				7D2B7C8A2C7A4F510001000C /* PaywallView.swift in Sources */,
+				7D2B7C8A2C7A4F510001000E /* ProAccessPolicy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -310,7 +318,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -343,7 +351,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

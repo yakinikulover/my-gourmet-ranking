@@ -2760,10 +2760,14 @@ struct StoreFormView: View {
     }
 
     private var canSaveArchiveSelection: Bool {
-        guard !proState.isPro, rank == .archive, seed.store?.rank != .archive else {
-            return true
-        }
-        return dataStore.stores.filter { $0.rank == .archive }.count < 3
+        guard rank == .archive else { return true }
+        return ProAccessPolicy.canAddArchive(
+            stores: dataStore.stores,
+            mainGenreId: mainGenreId,
+            subGenreId: subGenreId,
+            isPro: proState.isPro,
+            editingStore: seed.store
+        )
     }
 
     private func syncRankSelection() {
@@ -2930,6 +2934,7 @@ struct StoreDetailView: View {
     let storeId: String
     @State private var formSeed: StoreFormSeed?
     @State private var paywallReason: PaywallReason?
+    @State private var isDeleteConfirmationPresented = false
 
     private var store: Store? {
         dataStore.stores.first { $0.id == storeId }
@@ -3021,7 +3026,12 @@ struct StoreDetailView: View {
                                 .tint(AppTheme.tomato)
 
                                 Button {
-                                    if !proState.isPro, dataStore.stores.filter({ $0.rank == .archive }).count >= 3 {
+                                    if !ProAccessPolicy.canAddArchive(
+                                        stores: dataStore.stores,
+                                        mainGenreId: store.mainGenreId,
+                                        subGenreId: store.subGenreId,
+                                        isPro: proState.isPro
+                                    ) {
                                         paywallReason = .archiveLimit
                                     } else {
                                         dataStore.archiveStore(store.id)
@@ -3037,8 +3047,7 @@ struct StoreDetailView: View {
                                 Spacer()
 
                                 Button(role: .destructive) {
-                                    dataStore.deleteStore(store.id)
-                                    dismiss()
+                                    isDeleteConfirmationPresented = true
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -3060,6 +3069,19 @@ struct StoreDetailView: View {
                     Button("閉じる") { dismiss() }
                         .foregroundStyle(AppTheme.ink)
                 }
+            }
+            .confirmationDialog(
+                "この店舗を削除しますか？",
+                isPresented: $isDeleteConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button("削除", role: .destructive) {
+                    dataStore.deleteStore(storeId)
+                    dismiss()
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("削除した店舗と保存写真は元に戻せません。")
             }
             .sheet(item: $formSeed) { seed in
                 StoreFormView(seed: seed)
@@ -3320,6 +3342,7 @@ struct SettingsView: View {
     @State private var newSubGenreName = ""
     @State private var newSubGenreMainId = ""
     @State private var subGenreDrafts: [String: SubGenreDraft] = [:]
+    @State private var storePendingDeletion: Store?
 
     private var filteredStores: [Store] {
         dataStore.stores.filter { store in
@@ -3383,6 +3406,26 @@ struct SettingsView: View {
             Button("OK") { proState.message = nil }
         } message: {
             Text(proState.message ?? "")
+        }
+        .confirmationDialog(
+            "この店舗を削除しますか？",
+            isPresented: Binding(
+                get: { storePendingDeletion != nil },
+                set: { if !$0 { storePendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("削除", role: .destructive) {
+                if let storePendingDeletion {
+                    dataStore.deleteStore(storePendingDeletion.id)
+                }
+                storePendingDeletion = nil
+            }
+            Button("キャンセル", role: .cancel) {
+                storePendingDeletion = nil
+            }
+        } message: {
+            Text("削除した店舗と保存写真は元に戻せません。")
         }
     }
 
@@ -3480,13 +3523,18 @@ struct SettingsView: View {
                         StoreSettingsRow(store: store) {
                             formSeed = StoreFormSeed(store: store)
                         } onArchive: {
-                            if !proState.isPro, dataStore.stores.filter({ $0.rank == .archive }).count >= 3 {
+                            if !ProAccessPolicy.canAddArchive(
+                                stores: dataStore.stores,
+                                mainGenreId: store.mainGenreId,
+                                subGenreId: store.subGenreId,
+                                isPro: proState.isPro
+                            ) {
                                 paywallReason = .archiveLimit
                             } else {
                                 dataStore.archiveStore(store.id)
                             }
                         } onDelete: {
-                            dataStore.deleteStore(store.id)
+                            storePendingDeletion = store
                         }
                     }
                 }

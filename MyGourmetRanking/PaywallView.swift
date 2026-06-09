@@ -24,7 +24,7 @@ enum PaywallReason: Identifiable {
     var message: String {
         switch self {
         case .archiveLimit:
-            "無料プランではアーカイブは3件まで保存できます。Proにすると、過去の名店を無制限に残せます。"
+            "無料プランでは各種類のアーカイブを3件まで保存できます。Proにすると、過去の名店を無制限に残せます。"
         case .genreEditing:
             "ジャンル・種類編集はPro限定です。自分だけの分類でランキングを育てられます。"
         case .mapFullAccess:

@@ -23,7 +23,8 @@ final class GourmetDataStore: ObservableObject {
     }
 
     init() {
-        stores = Self.load([Store].self, key: StorageKey.stores) ?? InitialGenres.sampleStores
+        // Existing users keep their saved stores. New App Store installs start empty.
+        stores = Self.load([Store].self, key: StorageKey.stores) ?? []
         mainGenres = Self.load([MainGenre].self, key: StorageKey.mainGenres) ?? InitialGenres.mainGenres
         subGenres = Self.load([SubGenre].self, key: StorageKey.subGenres) ?? InitialGenres.subGenres
         migrateTaxonomyIfNeeded()
