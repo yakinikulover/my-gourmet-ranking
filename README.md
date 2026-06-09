@@ -37,3 +37,17 @@ xcodebuild -project MyGourmetRanking.xcodeproj \
 - 設定画面での登録データ、ジャンル、種類の管理
 - 初期ジャンル・種類データの自動投入
 - 端末内UserDefaults保存
+
+## 公開ページ
+
+- [サポート](https://yakinikulover.github.io/my-gourmet-ranking/support.html)
+- [プライバシーポリシー](https://yakinikulover.github.io/my-gourmet-ranking/privacy.html)
+- [利用規約](https://yakinikulover.github.io/my-gourmet-ranking/terms.html)
+
+GitHub Pagesは `docs/` ディレクトリから公開します。公開用メールアドレスを用意した後、`docs/support.html`、`docs/privacy.html`、`docs/terms.html` の問い合わせ先を差し替えてください。
+
+## 公開前テスト
+
+```sh
+scripts/run-core-tests.sh
+```

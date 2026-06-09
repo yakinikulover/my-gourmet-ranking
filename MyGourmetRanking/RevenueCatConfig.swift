@@ -7,8 +7,8 @@ enum RevenueCatConfig {
     // for this app. Keeping it centralized avoids scattering environment values.
     static let publicSDKKey = "REVENUECAT_PUBLIC_SDK_KEY"
 
-    static let termsURL = URL(string: "https://example.com/terms")!
-    static let privacyURL = URL(string: "https://example.com/privacy")!
+    static let termsURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/terms.html")!
+    static let privacyURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/privacy.html")!
 
     #if DEBUG
     static let forceProForUAT = true
