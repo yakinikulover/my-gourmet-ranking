@@ -78,33 +78,34 @@ struct PaywallView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppBackgroundView()
+                AppTheme.background.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
-                        paywallHero
+                VStack(spacing: 24) {
+                    Spacer()
+
+                    Image(systemName: reason.heroIcon)
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(AppTheme.tomato)
+
+                    VStack(spacing: 10) {
+                        Text(reason.heroTitle.replacingOccurrences(of: "\n", with: ""))
+                            .font(.system(size: 28, weight: .black, design: .rounded))
+                            .foregroundStyle(AppTheme.ink)
+                            .multilineTextAlignment(.center)
 
                         Text(reason.message)
-                            .font(.body.weight(.medium))
+                            .font(.subheadline)
                             .foregroundStyle(AppTheme.softText)
-                            .lineSpacing(5)
-
-                        Text("買い切りPro")
-                            .font(.caption.weight(.black))
-                            .tracking(1.1)
-                            .foregroundStyle(AppTheme.tomato)
-
-                        Text("一度の購入で、ずっと使えます。")
-                            .font(.title3.weight(.black))
-                            .foregroundStyle(AppTheme.ink)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        featureRow("アーカイブ無制限", icon: "archivebox.fill")
-                        featureRow("ジャンル・種類編集", icon: "slider.horizontal.3")
-                        featureRow("グルメMap完全解放", icon: "map.fill")
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .frame(maxWidth: 310)
                     }
-                    .padding(18)
-                    .modernCard(cornerRadius: 18)
+
+                    HStack(spacing: 16) {
+                        featureChip("Archive無制限")
+                        featureChip("Map完全解放")
+                        featureChip("ジャンル編集")
+                    }
 
                     VStack(spacing: 10) {
                         Button {
@@ -118,34 +119,25 @@ struct PaywallView: View {
                         .tint(AppTheme.tomato)
                         .disabled(proState.isLoading || proState.isPro)
 
-                        Button("無料ではじめる") {
-                            dismiss()
-                        }
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(AppTheme.softText)
-                        .padding(.top, 2)
-
-                        Button {
-                            Task { await proState.restorePurchases() }
-                        } label: {
-                            Text("購入を復元")
-                                .font(.subheadline.weight(.bold))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(proState.isLoading)
+                        Text("買い切り。一度の購入でずっと使えます。")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.muted)
                     }
 
-                    HStack(spacing: 16) {
+                    Spacer()
+
+                    HStack(spacing: 18) {
+                        Button("無料ではじめる") { dismiss() }
+                        Button("購入を復元") {
+                            Task { await proState.restorePurchases() }
+                        }
                         Link("利用規約", destination: RevenueCatConfig.termsURL)
                         Link("プライバシーポリシー", destination: RevenueCatConfig.privacyURL)
                     }
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(AppTheme.olive)
-                    .frame(maxWidth: .infinity)
-                    }
-                    .padding(22)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(AppTheme.muted)
                 }
+                .padding(24)
             }
             .navigationTitle(reason.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -167,47 +159,14 @@ struct PaywallView: View {
         }
     }
 
-    private var paywallHero: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(AppTheme.ink)
-                .frame(height: 245)
-
+    private func featureChip(_ title: String) -> some View {
+        VStack(spacing: 7) {
             Circle()
-                .fill(AppTheme.tomato)
-                .frame(width: 180, height: 180)
-                .offset(x: 220, y: -80)
-
-            Image(systemName: reason.heroIcon)
-                .font(.system(size: 72, weight: .black))
-                .foregroundStyle(AppTheme.background)
-                .rotationEffect(.degrees(-8))
-                .offset(x: 245, y: -118)
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text(reason.eyebrow)
-                    .font(.caption.weight(.black))
-                    .tracking(1.3)
-                    .foregroundStyle(AppTheme.tomato)
-                Text(reason.heroTitle)
-                    .font(.system(size: 31, weight: .black, design: .rounded))
-                    .foregroundStyle(AppTheme.background)
-                    .lineSpacing(2)
-            }
-            .padding(22)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: AppTheme.ink.opacity(0.18), radius: 20, y: 10)
-    }
-
-    private func featureRow(_ title: String, icon: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(AppTheme.tomato)
-                .frame(width: 24)
+                .fill(AppTheme.tomato.opacity(0.1))
+                .frame(width: 7, height: 7)
             Text(title)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(AppTheme.ink)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(AppTheme.softText)
         }
     }
 }

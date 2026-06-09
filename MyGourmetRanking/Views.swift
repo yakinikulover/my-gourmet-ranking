@@ -139,70 +139,48 @@ private struct OnboardingView: View {
     let onFinish: () -> Void
     @State private var selectedPage = 0
 
-    private let pages = OnboardingPage.samplePages
+    private let pageImages = ["Onboarding01", "Onboarding02", "Onboarding03", "Onboarding04"]
 
     var body: some View {
         ZStack {
             AppBackgroundView()
 
-            VStack(spacing: 0) {
-                HStack {
-                    Button("スキップ") {
-                        onFinish()
-                    }
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(AppTheme.softText)
-
-                    Spacer()
-
-                    Text("My Gourmet Ranking")
-                        .font(.caption.weight(.black))
-                        .tracking(1.2)
-                        .foregroundStyle(AppTheme.tomato)
-                }
-                .padding(.horizontal, 22)
-                .padding(.top, 18)
-                .padding(.bottom, 6)
-
+            ZStack(alignment: .topTrailing) {
                 TabView(selection: $selectedPage) {
-                    ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
-                        OnboardingPageView(page: page)
+                    ForEach(Array(pageImages.enumerated()), id: \.offset) { index, imageName in
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .ignoresSafeArea()
                             .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
-                VStack(spacing: 18) {
-                    HStack(spacing: 7) {
-                        ForEach(pages.indices, id: \.self) { index in
-                            Capsule()
-                                .fill(index == selectedPage ? AppTheme.tomato : AppTheme.hairline)
-                                .frame(width: index == selectedPage ? 24 : 7, height: 7)
-                                .animation(.spring(response: 0.32, dampingFraction: 0.82), value: selectedPage)
-                        }
-                    }
-
+                HStack {
                     Button {
-                        if selectedPage == pages.count - 1 {
-                            onFinish()
-                        } else {
-                            withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
-                                selectedPage += 1
-                            }
+                        if selectedPage > 0 {
+                            withAnimation { selectedPage -= 1 }
                         }
                     } label: {
-                        Text(selectedPage == pages.count - 1 ? "はじめる" : "次へ")
-                            .font(.headline.weight(.black))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(AppTheme.tomato, in: Capsule())
-                            .shadow(color: AppTheme.tomato.opacity(0.24), radius: 16, y: 8)
+                        Color.clear.frame(width: 74, height: 58)
                     }
-                    .buttonStyle(.plain)
+                    .disabled(selectedPage == 0)
+
+                    Spacer()
+
+                    Button {
+                        if selectedPage == 0 || selectedPage == pageImages.count - 1 {
+                            onFinish()
+                        } else {
+                            withAnimation { selectedPage += 1 }
+                        }
+                    } label: {
+                        Color.clear.frame(width: 92, height: 58)
+                    }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                .padding(.horizontal, 4)
+                .frame(maxHeight: .infinity, alignment: .bottom)
             }
         }
     }
