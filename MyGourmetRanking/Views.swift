@@ -135,313 +135,1066 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Onboarding
+//
+// "Gourmet journal" onboarding, art-directed like a Japanese food magazine:
+// cream paper, one strong hero per page, washi tape, rubber stamps and a
+// hanko seal. Page 01 is the cover; pages 02–04 are feature spreads.
+// Everything is drawn natively — no screenshots, photos are bundled assets.
+
+// MARK: Design tokens
+
+private enum Onb {
+    static let backgroundCream = Color(hex: "F3EEE1")
+    static let paperWhite      = Color(hex: "FBF8F1")
+    static let accentRedBrown  = Color(hex: "B5462F")
+    static let oliveGreen      = Color(hex: "7C7F4E")
+    static let ink             = Color(hex: "2C2A22")
+    static let mutedText       = Color(hex: "8B8A7B")
+    static let tapeBeige       = Color(hex: "D9D2B6")
+    static let tapePink        = Color(hex: "E4B6A4")
+    static let tapeOlive       = Color(hex: "C2C29A")
+    static let paperShadow     = Color(hex: "5B4B33")
+    static let stampStroke     = Color(hex: "B5462F")
+    // Flat illustrated map
+    static let mapLand         = Color(hex: "ECE9DF")
+    static let mapWater        = Color(hex: "ACD4EC")
+    static let mapPark         = Color(hex: "D4DBC0")
+
+    static let nav        = Color(hex: "9C9A86")
+    static let ruleLine   = Color(hex: "C7C1AE")
+    static let cardStroke = Color(hex: "E6E0D0")
+    static let script     = Color(hex: "5C5A50")
+    static let hPad: CGFloat = 22
+}
+
+// MARK: Shell
+
 private struct OnboardingView: View {
     let onFinish: () -> Void
     @State private var selectedPage = 0
 
-    private let pageImages = ["Onboarding01", "Onboarding02", "Onboarding03", "Onboarding04"]
+    private let pageCount = 4
+    private let barHeight: CGFloat = 60
+
+    init(onFinish: @escaping () -> Void) {
+        self.onFinish = onFinish
+        #if DEBUG
+        // Test hook: jump straight to a page for screenshot verification.
+        if let raw = ProcessInfo.processInfo.environment["ONB_START_PAGE"],
+           let page = Int(raw), (0..<pageCount).contains(page) {
+            _selectedPage = State(initialValue: page)
+        }
+        #endif
+    }
 
     var body: some View {
+        ZStack(alignment: .bottom) {
+            OnbBackground()
+
+            TabView(selection: $selectedPage) {
+                OnbCoverPage().tag(0)
+                OnbBestPage().tag(1)
+                OnbMapPage().tag(2)
+                OnbArchivePage().tag(3)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .ignoresSafeArea(.container, edges: .bottom)
+
+            OnbControlBar(
+                index: selectedPage,
+                total: pageCount,
+                onBack: { withAnimation(.easeInOut) { selectedPage = max(0, selectedPage - 1) } },
+                onNext: { withAnimation(.easeInOut) { selectedPage = min(pageCount - 1, selectedPage + 1) } },
+                onSkip: onFinish
+            )
+            .frame(height: barHeight)
+            .padding(.bottom, 4)
+        }
+    }
+}
+
+/// Cream paper: warm base, faint grain, very light ruled lines.
+private struct OnbBackground: View {
+    var body: some View {
         ZStack {
-            AppBackgroundView()
+            Onb.backgroundCream
 
-            ZStack(alignment: .topTrailing) {
-                TabView(selection: $selectedPage) {
-                    ForEach(Array(pageImages.enumerated()), id: \.offset) { index, imageName in
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .ignoresSafeArea()
-                            .tag(index)
+            Canvas { context, size in
+                for index in 0..<120 {
+                    let x = CGFloat((index * 53) % 101) / 100 * size.width
+                    let y = CGFloat((index * 79) % 103) / 102 * size.height
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x, y: y, width: 1.1, height: 1.1)),
+                        with: .color(Onb.paperShadow.opacity(0.05))
+                    )
+                }
+            }
+
+            GeometryReader { geo in
+                Path { path in
+                    var y: CGFloat = 96
+                    while y < geo.size.height {
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: geo.size.width, y: y))
+                        y += 30
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .stroke(Onb.ruleLine.opacity(0.22), lineWidth: 0.7)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
 
-                HStack {
-                    Button {
-                        if selectedPage > 0 {
-                            withAnimation { selectedPage -= 1 }
-                        }
-                    } label: {
-                        Color.clear.frame(width: 74, height: 58)
-                    }
-                    .disabled(selectedPage == 0)
+// MARK: Shared decorations
 
-                    Spacer()
+private struct WashiTape: View {
+    var color: Color = Onb.tapeBeige
+    var width: CGFloat = 46
+    var height: CGFloat = 16
+    var angle: Double = -4
 
-                    Button {
-                        if selectedPage == 0 || selectedPage == pageImages.count - 1 {
-                            onFinish()
-                        } else {
-                            withAnimation { selectedPage += 1 }
-                        }
-                    } label: {
-                        Color.clear.frame(width: 92, height: 58)
-                    }
+    var body: some View {
+        Rectangle()
+            .fill(color.opacity(0.82))
+            .frame(width: width, height: height)
+            .overlay(
+                LinearGradient(
+                    colors: [.white.opacity(0.22), .clear, .white.opacity(0.12)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .overlay(Rectangle().stroke(.white.opacity(0.18), lineWidth: 0.5))
+            .rotationEffect(.degrees(angle))
+            .shadow(color: Onb.paperShadow.opacity(0.12), radius: 1.5, y: 1)
+    }
+}
+
+/// White-framed photo snapshot with optional masking tape.
+private struct OnbPhotoCard: View {
+    let image: String
+    var width: CGFloat
+    var height: CGFloat
+    var angle: Double = 0
+    var corner: CGFloat = 6
+    var tape: Color? = nil
+    var tapeAngle: Double = -8
+
+    var body: some View {
+        Image(image)
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: height)
+            .clipped()
+            .padding(5)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+            .shadow(color: Onb.paperShadow.opacity(0.22), radius: 5, y: 3)
+            .overlay(alignment: .top) {
+                if let tape {
+                    WashiTape(color: tape, width: min(width * 0.42, 50), height: 14, angle: tapeAngle)
+                        .offset(y: -6)
                 }
-                .padding(.horizontal, 4)
-                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .rotationEffect(.degrees(angle))
+    }
+}
+
+/// Red rubber-stamp crown badge with an ink-fade texture.
+private struct OnbCrownStamp: View {
+    var size: CGFloat = 56
+    var body: some View {
+        ZStack {
+            Circle().fill(Onb.stampStroke.opacity(0.06))
+            Circle().stroke(Onb.stampStroke.opacity(0.9), lineWidth: 2.6)
+            Circle().stroke(Onb.stampStroke.opacity(0.55), lineWidth: 1.2).padding(3.5)
+            Image(systemName: "crown.fill")
+                .font(.system(size: size * 0.42, weight: .black))
+                .foregroundStyle(Onb.stampStroke.opacity(0.9))
+            Canvas { ctx, sz in
+                for i in 0..<10 {
+                    let x = CGFloat((i * 37) % 100) / 100 * sz.width
+                    let y = CGFloat((i * 53) % 100) / 100 * sz.height
+                    ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 1.4, height: 1.4)),
+                             with: .color(Onb.backgroundCream.opacity(0.5)))
+                }
+            }
+            .clipShape(Circle())
+        }
+        .frame(width: size, height: size)
+        .rotationEffect(.degrees(-8))
+    }
+}
+
+/// Square red hanko seal reading 店帳 (brush glyphs from the bundled subset).
+private struct OnbHankoSeal: View {
+    var size: CGFloat = 46
+    var body: some View {
+        VStack(spacing: -3) {
+            Text("店").font(.brush(size * 0.42))
+            Text("帳").font(.brush(size * 0.42))
+        }
+        .foregroundStyle(.white)
+        .frame(width: size, height: size)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Onb.accentRedBrown.opacity(0.92))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(.white.opacity(0.3), lineWidth: 1)
+                .padding(2.5)
+        )
+        .rotationEffect(.degrees(7))
+        .shadow(color: Onb.paperShadow.opacity(0.2), radius: 3, y: 2)
+    }
+}
+
+/// Magazine kicker: page number + tracked label ("01 — WELCOME").
+private struct OnbKicker: View {
+    let number: String
+    let label: String
+    var body: some View {
+        HStack(spacing: 9) {
+            Text(number)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(Onb.accentRedBrown)
+            Rectangle()
+                .fill(Onb.accentRedBrown.opacity(0.55))
+                .frame(width: 18, height: 1.5)
+            Text(label)
+                .font(.system(size: 11, weight: .bold))
+                .tracking(2.5)
+                .foregroundStyle(Onb.mutedText)
+        }
+    }
+}
+
+/// Vertical Japanese caption, like the spine copy of a magazine.
+private struct OnbVerticalCaption: View {
+    let text: String
+    var body: some View {
+        VStack(spacing: 3) {
+            ForEach(Array(text.enumerated()), id: \.offset) { _, ch in
+                Text(String(ch))
+                    .font(.system(size: 12, weight: .medium, design: .serif))
+            }
+        }
+        .foregroundStyle(Onb.mutedText.opacity(0.9))
+    }
+}
+
+private struct OnbBookmark: View {
+    var filled: Bool
+    var color: Color
+    var body: some View {
+        Image(systemName: filled ? "bookmark.fill" : "bookmark")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(color)
+    }
+}
+
+/// Brush calligraphy with a faux-bold double pass for a thicker ink stroke.
+private struct BrushTitle: View {
+    let text: String
+    var size: CGFloat
+    var color: Color = Onb.ink
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Text(text).font(.brush(size)).foregroundStyle(color)
+            Text(text).font(.brush(size)).foregroundStyle(color).offset(x: 0.7)
+        }
+    }
+}
+
+/// Gentle hand-drawn underline.
+private struct WavyUnderline: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let y = rect.midY
+        let h = rect.height
+        p.move(to: CGPoint(x: rect.minX, y: y + h * 0.18))
+        p.addCurve(
+            to: CGPoint(x: rect.maxX, y: y - h * 0.08),
+            control1: CGPoint(x: rect.minX + rect.width * 0.33, y: y + h * 0.55),
+            control2: CGPoint(x: rect.minX + rect.width * 0.62, y: y - h * 0.5)
+        )
+        return p
+    }
+}
+
+/// Single sine stroke used for postal-stamp line clusters.
+private struct WavyLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let steps = 24
+        for i in 0...steps {
+            let t = CGFloat(i) / CGFloat(steps)
+            let x = rect.width * t
+            let yy = rect.midY + sin(t * .pi * 3) * (rect.height / 2)
+            if i == 0 { p.move(to: CGPoint(x: x, y: yy)) }
+            else { p.addLine(to: CGPoint(x: x, y: yy)) }
+        }
+        return p
+    }
+}
+
+private struct OnbStampLines: View {
+    var color: Color = Onb.accentRedBrown
+    var width: CGFloat = 44
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(0..<3, id: \.self) { _ in
+                WavyLine()
+                    .stroke(color.opacity(0.75), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(width: width, height: 5)
             }
         }
     }
 }
 
-private struct OnboardingPage: Identifiable {
-    let id = UUID()
-    let eyebrow: String
-    let title: String
-    let body: String
-    let accent: Color
-    let systemImage: String
-    let style: OnboardingVisualStyle
+// MARK: Control bar
 
-    static let samplePages: [OnboardingPage] = [
-        .init(
-            eyebrow: "WELCOME",
-            title: "自分だけの、うまい店帳。",
-            body: "行った店を忘れない。ジャンルごとにBest5を育てて、あなたの食の記録を一冊に。",
-            accent: AppTheme.tomato,
-            systemImage: "fork.knife",
-            style: .welcome
-        ),
-        .init(
-            eyebrow: "BEST 5",
-            title: "順位で残すと、記憶が濃くなる。",
-            body: "1位から5位まで、TBDも含めて見やすく管理。迷ったら、今の好きで並べればOK。",
-            accent: AppTheme.ink,
-            systemImage: "list.number",
-            style: .ranking
-        ),
-        .init(
-            eyebrow: "GOURMET MAP",
-            title: "行った店が、地図に育つ。",
-            body: "保存したお店はMapへ。街ごとの記憶や、また行きたい場所が一目で見える。",
-            accent: AppTheme.olive,
-            systemImage: "map.fill",
-            style: .map
-        ),
-        .init(
-            eyebrow: "ARCHIVE",
-            title: "Best外の名店も、ちゃんと残す。",
-            body: "過去の名店、惜しくも圏外の店、いつかまた行きたい店。Archiveで自分の食史に。",
-            accent: AppTheme.tomato,
-            systemImage: "archivebox.fill",
-            style: .archive
-        )
-    ]
+private struct OnbPageDots: View {
+    let count: Int
+    let index: Int
+    var body: some View {
+        HStack(spacing: 9) {
+            ForEach(0..<count, id: \.self) { i in
+                Circle()
+                    .fill(i == index ? Onb.accentRedBrown : Onb.ruleLine.opacity(0.8))
+                    .frame(width: i == index ? 9 : 7, height: i == index ? 9 : 7)
+            }
+        }
+    }
 }
 
-private enum OnboardingVisualStyle {
-    case welcome
-    case ranking
-    case map
-    case archive
-}
+private struct OnbControlBar: View {
+    let index: Int
+    let total: Int
+    let onBack: () -> Void
+    let onNext: () -> Void
+    let onSkip: () -> Void
 
-private struct OnboardingPageView: View {
-    let page: OnboardingPage
+    private func label(_ text: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Onb.nav)
+                .tracking(1)
+        }
+    }
+
+    @ViewBuilder private var leading: some View {
+        switch index {
+        case 1: label("スキップ", action: onSkip)
+        case 2, 3: label("戻る", action: onBack)
+        default: Color.clear.frame(width: 1)
+        }
+    }
+
+    @ViewBuilder private var trailing: some View {
+        switch index {
+        case 0, 3: label("スキップ", action: onSkip)
+        default: label("次へ", action: onNext)
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            OnboardingVisual(page: page)
-                .frame(maxWidth: .infinity)
-                .frame(height: 330)
-                .padding(.top, 10)
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: page.systemImage)
-                    Text(page.eyebrow)
-                }
-                .font(.caption.weight(.black))
-                .tracking(1.2)
-                .foregroundStyle(page.accent)
-
-                Text(page.title)
-                    .font(.system(size: 34, weight: .black, design: .rounded))
-                    .foregroundStyle(AppTheme.ink)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(page.body)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(AppTheme.softText)
-                    .lineSpacing(5)
-                    .fixedSize(horizontal: false, vertical: true)
+        ZStack {
+            OnbPageDots(count: total, index: index)
+            HStack {
+                leading
+                Spacer()
+                trailing
             }
-            .padding(.horizontal, 24)
+        }
+        .padding(.horizontal, 26)
+    }
+}
+
+// MARK: Page 01 — Cover
+
+/// The cover page: brush-calligraphy masthead with a hanko seal, a vertical
+/// spine caption, and a fanned polaroid trio over the handwritten wordmark.
+private struct OnbCoverPage: View {
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Vertical spine copy down the right edge
+            OnbVerticalCaption(text: "うまい記録が、人生を豊かにする。")
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 18)
+                .padding(.top, 64)
+
+            VStack(alignment: .leading, spacing: 0) {
+                OnbKicker(number: "01", label: "WELCOME")
+                    .padding(.top, 18)
+
+                // Masthead (gothic, matching the other onboarding headings)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("自分だけの、")
+                        .font(.system(size: 36, weight: .heavy))
+                        .foregroundStyle(Onb.ink)
+                    HStack(alignment: .bottom, spacing: 12) {
+                        Text("うまい店帳。")
+                            .font(.system(size: 36, weight: .heavy))
+                            .foregroundStyle(Onb.ink)
+                        OnbHankoSeal(size: 44)
+                            .offset(y: -5)
+                    }
+                }
+                .padding(.top, 22)
+
+                Text("食べた感動を、かんたんに記録。\nあなたのグルメ体験を最高の形で残そう。")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(Onb.mutedText)
+                    .lineSpacing(5)
+                    .padding(.top, 16)
+
+                Spacer(minLength: 8)
+
+                // Fanned polaroid trio
+                ZStack {
+                    OnbPhotoCard(image: "OnbCoverRamen", width: 118, height: 132, angle: -10)
+                        .offset(x: -102, y: 12)
+                    OnbPhotoCard(image: "OnbCoverSweets", width: 112, height: 126, angle: 11)
+                        .offset(x: 104, y: 16)
+                    OnbPhotoCard(image: "OnbCoverCurry", width: 150, height: 164, angle: -2,
+                                 tape: Onb.tapeBeige, tapeAngle: -7)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 210)
+
+                // Wordmark line
+                HStack(spacing: 12) {
+                    OnbCrownStamp(size: 38)
+                    Text("My Gourmet Ranking")
+                        .font(.custom("SnellRoundhand-Bold", size: 24))
+                        .foregroundStyle(Onb.script)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 26)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Onb.hPad)
+        }
+        .padding(.bottom, 64)
+    }
+}
+
+// MARK: Page 02 — Best 5
+
+private struct OnbBestPage: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            OnbKicker(number: "02", label: "BEST 5")
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 18)
+
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("Best5")
+                    .font(.system(size: 29, weight: .heavy))
+                    .foregroundStyle(Onb.accentRedBrown)
+                Text("で記録する")
+                    .font(.system(size: 29, weight: .heavy))
+                    .foregroundStyle(Onb.ink)
+                Spacer()
+            }
+            .padding(.horizontal, Onb.hPad)
+            .padding(.top, 10)
+
+            Text("印象に残ったお店をベスト5でかんたん記録。\n迷ったら、今の「好き」で並べればOK。")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Onb.mutedText)
+                .lineSpacing(3)
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 6)
+
+            // Ranked list on one paper card, crown stamp overlapping the corner
+            VStack(spacing: 0) {
+                OnbBestRow(rank: 1, image: "OnbBestSukiyaki", name: "すき焼き おか乃", area: "東京・人形町",
+                           memo: ["お肉がとろける…！", "割下のバランスが最高。"], tape: Onb.tapeBeige)
+                divider
+                OnbBestRow(rank: 2, image: "OnbBestDonburi", name: "海鮮丼 まる新", area: "東京・豊洲",
+                           memo: ["ネタが新鮮で大満足。", "朝から並ぶ価値あり。"], tape: Onb.tapePink)
+                divider
+                OnbBestRow(rank: 3, image: nil, name: "TBD", area: "未登録",
+                           memo: ["まだ記録がありません。", "行ったらメモを残そう！"], tape: Onb.tapeOlive)
+                divider
+                OnbBestRow(rank: 4, image: nil, name: "TBD", area: "未登録",
+                           memo: ["まだ記録がありません。", "行ったらメモを残そう！"], tape: Onb.tapePink)
+                divider
+                OnbBestRow(rank: 5, image: nil, name: "TBD", area: "未登録",
+                           memo: ["まだ記録がありません。", "行ったらメモを残そう！"], tape: Onb.tapeBeige)
+            }
+            .padding(.vertical, 6)
+            .background(Onb.paperWhite)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Onb.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: Onb.paperShadow.opacity(0.08), radius: 10, y: 5)
+            .overlay(alignment: .topLeading) {
+                WashiTape(color: Onb.tapeBeige, width: 58, height: 18, angle: -9)
+                    .offset(x: -6, y: -9)
+            }
+            .overlay(alignment: .topTrailing) {
+                OnbCrownStamp(size: 46)
+                    .offset(x: 10, y: -18)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 22)
 
             Spacer(minLength: 0)
         }
+        .padding(.bottom, 60)
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Onb.ruleLine.opacity(0.5)).frame(height: 1)
+            .padding(.horizontal, 14)
     }
 }
 
-private struct OnboardingVisual: View {
-    let page: OnboardingPage
+private struct OnbBestRow: View {
+    let rank: Int
+    let image: String?
+    let name: String
+    let area: String
+    let memo: [String]
+    let tape: Color
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(page.accent.opacity(0.08))
-                .frame(width: 280, height: 280)
-                .offset(x: 55, y: -24)
-            Circle()
-                .fill(AppTheme.olive.opacity(0.08))
-                .frame(width: 180, height: 180)
-                .offset(x: -90, y: 72)
+        HStack(alignment: .top, spacing: 11) {
+            Text("\(rank)")
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                .foregroundStyle(rank <= 3 ? Onb.accentRedBrown : Onb.ink.opacity(0.7))
+                .frame(width: 20, alignment: .center)
+                .padding(.top, 5)
 
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(AppTheme.card.opacity(0.92))
-                .frame(width: 268, height: 286)
-                .rotationEffect(.degrees(-2))
-                .shadow(color: AppTheme.ink.opacity(0.09), radius: 22, y: 14)
+            thumbnail
 
-            DashedDivider(color: AppTheme.hairline)
-                .frame(width: 235)
-                .rotationEffect(.degrees(-2))
-                .offset(y: -106)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(image == nil ? Onb.mutedText : Onb.ink)
+                Label(area, systemImage: "mappin")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Onb.mutedText)
+                    .labelStyle(.titleAndIcon)
+                ForEach(memo, id: \.self) { line in
+                    Text(line)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Onb.mutedText.opacity(0.95))
+                }
+                .padding(.top, 0.5)
+            }
+            .padding(.top, 2)
 
-            TapeDecoration(color: AppTheme.tape)
-                .scaleEffect(1.18)
-                .offset(x: -65, y: -138)
+            Spacer(minLength: 4)
 
-            visualContent
-
-            Image(systemName: "sparkles")
-                .font(.title2.weight(.black))
-                .foregroundStyle(page.accent)
-                .rotationEffect(.degrees(-12))
-                .offset(x: -132, y: -118)
-
-            Image(systemName: "arrow.down.right")
-                .font(.title3.weight(.black))
-                .foregroundStyle(AppTheme.olive)
-                .rotationEffect(.degrees(-10))
-                .offset(x: 126, y: -90)
+            OnbBookmark(filled: image != nil,
+                        color: image != nil ? Onb.accentRedBrown : Onb.oliveGreen.opacity(0.7))
+                .padding(.top, 3)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
     }
 
-    @ViewBuilder
-    private var visualContent: some View {
-        switch page.style {
-        case .welcome:
+    @ViewBuilder private var thumbnail: some View {
+        if let image {
+            Image(image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(alignment: .top) {
+                    WashiTape(color: tape, width: 30, height: 11, angle: -7).offset(y: -5)
+                }
+        } else {
             ZStack {
-                FoodTile(title: "寿司", color: AppTheme.tomato, icon: "takeoutbag.and.cup.and.straw.fill")
-                    .offset(x: -62, y: -48)
-                    .rotationEffect(.degrees(-8))
-                FoodTile(title: "焼肉", color: AppTheme.ink, icon: "flame.fill")
-                    .offset(x: 58, y: -12)
-                    .rotationEffect(.degrees(7))
-                FoodTile(title: "カフェ", color: AppTheme.olive, icon: "cup.and.saucer.fill")
-                    .offset(x: -2, y: 70)
-                    .rotationEffect(.degrees(-2))
-            }
-        case .ranking:
-            VStack(spacing: 10) {
-                ForEach(1...5, id: \.self) { rank in
-                    HStack(spacing: 12) {
-                        Text("\(rank)")
-                            .font(.system(size: 28, weight: .black, design: .rounded))
-                            .foregroundStyle(rank <= 3 ? AppTheme.tomato : AppTheme.ink)
-                            .frame(width: 30)
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(rank == 1 ? AppTheme.tomato.opacity(0.18) : AppTheme.softFill)
-                            .frame(width: rank == 1 ? 118 : 92, height: 20)
-                        Spacer()
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Onb.paperWhite)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8).stroke(Onb.cardStroke, lineWidth: 1)
+                    )
+                VStack(spacing: 6) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Rectangle().fill(Onb.ruleLine.opacity(0.45)).frame(height: 1)
                     }
-                    .frame(width: 200)
                 }
+                .padding(.horizontal, 9)
+                .offset(y: 10)
+                Text("TBD")
+                    .font(.system(size: 16, weight: .regular, design: .serif))
+                    .italic()
+                    .foregroundStyle(Onb.mutedText.opacity(0.85))
+                    .offset(y: -4)
             }
-            .padding(.top, 10)
-        case .map:
-            ZStack {
-                ForEach(0..<4, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2)
-                        .stroke(AppTheme.hairline, lineWidth: 1)
-                        .frame(width: 210, height: 1)
-                        .rotationEffect(.degrees(Double(index * 18 - 24)))
-                        .offset(y: CGFloat(index * 34 - 48))
-                }
-                MapPinLabel(text: "1", color: AppTheme.tomato)
-                    .offset(x: -48, y: -28)
-                MapPinLabel(text: "A", color: AppTheme.olive)
-                    .offset(x: 54, y: 38)
-                MapPinLabel(text: "5", color: AppTheme.ink)
-                    .offset(x: 20, y: -78)
-            }
-        case .archive:
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: "archivebox.fill")
-                        .foregroundStyle(AppTheme.olive)
-                    Text("Archive")
-                        .font(.title2.weight(.black))
-                }
-                ForEach(["元 1位  浅草の名店", "未ランクイン  深夜飯", "元 4位  また行きたい"], id: \.self) { text in
-                    Text(text)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(AppTheme.ink)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(AppTheme.softFill, in: Capsule())
-                }
+            .frame(width: 58, height: 58)
+            .rotationEffect(.degrees(-2))
+            .overlay(alignment: .top) {
+                WashiTape(color: tape, width: 32, height: 12, angle: -8).offset(y: -5)
             }
         }
     }
 }
 
-private struct FoodTile: View {
-    let title: String
-    let color: Color
-    let icon: String
+// MARK: Page 03 — Map
+
+private struct OnbMapPage: View {
+    private struct Place: Identifiable {
+        let id = UUID()
+        let label: String
+        let rx: CGFloat
+        let ry: CGFloat
+        var big: Bool = false
+    }
+
+    private struct MapPin: Identifiable {
+        let id = UUID()
+        let number: Int
+        let color: Color
+        let rx: CGFloat
+        let ry: CGFloat
+    }
+
+    private let places: [Place] = [
+        .init(label: "新宿", rx: 0.14, ry: 0.40),
+        .init(label: "上野", rx: 0.56, ry: 0.13),
+        .init(label: "浅草", rx: 0.78, ry: 0.22),
+        .init(label: "東京", rx: 0.41, ry: 0.55, big: true),
+        .init(label: "渋谷", rx: 0.14, ry: 0.66),
+        .init(label: "品川", rx: 0.18, ry: 0.86)
+    ]
+
+    private let pins: [MapPin] = [
+        .init(number: 1, color: Onb.accentRedBrown, rx: 0.45, ry: 0.45),
+        .init(number: 2, color: Onb.accentRedBrown, rx: 0.73, ry: 0.31),
+        .init(number: 3, color: Onb.accentRedBrown, rx: 0.20, ry: 0.47),
+        .init(number: 4, color: Onb.oliveGreen, rx: 0.46, ry: 0.75),
+        .init(number: 5, color: Onb.oliveGreen, rx: 0.66, ry: 0.60)
+    ]
+
+    /// Dashed "food journey" route, drawn through the pins in visit order.
+    private let routeOrder = [2, 0, 1, 4, 3]
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2.weight(.black))
-                .foregroundStyle(color)
-            Text(title)
-                .font(.caption.weight(.black))
-                .foregroundStyle(AppTheme.ink)
+        VStack(alignment: .leading, spacing: 0) {
+            OnbKicker(number: "03", label: "GOURMET MAP")
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 18)
+
+            HStack(alignment: .top, spacing: 6) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("行った店が")
+                        .font(.system(size: 29, weight: .heavy))
+                        .foregroundStyle(Onb.ink)
+                    HStack(spacing: 0) {
+                        Text("地図")
+                            .font(.system(size: 29, weight: .heavy))
+                            .foregroundStyle(Onb.accentRedBrown)
+                            .overlay(alignment: .bottomLeading) {
+                                WavyUnderline()
+                                    .stroke(Onb.accentRedBrown,
+                                            style: StrokeStyle(lineWidth: 2.8, lineCap: .round))
+                                    .frame(width: 60, height: 8)
+                                    .offset(y: 6)
+                            }
+                        Text("になる")
+                            .font(.system(size: 29, weight: .heavy))
+                            .foregroundStyle(Onb.ink)
+                    }
+                }
+                Spacer()
+                OnbStampLines(width: 42)
+                    .padding(.top, 8)
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Onb.accentRedBrown)
+                    .rotationEffect(.degrees(8))
+                    .padding(.top, 4)
+            }
+            .padding(.horizontal, Onb.hPad)
+            .padding(.top, 10)
+
+            Text("お店の場所が地図にピンで表示。\n食の旅の思い出がひと目で見渡せる。")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Onb.mutedText)
+                .lineSpacing(3)
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 8)
+
+            // Flat illustrated map, pasted like a snapshot
+            GeometryReader { geo in
+                let w = geo.size.width
+                let h = geo.size.height
+                ZStack {
+                    Onb.mapLand
+
+                    // Tokyo bay
+                    Path { p in
+                        p.move(to: CGPoint(x: w * 1.02, y: h * 0.34))
+                        p.addLine(to: CGPoint(x: w * 0.82, y: h * 0.52))
+                        p.addLine(to: CGPoint(x: w * 0.84, y: h * 0.66))
+                        p.addLine(to: CGPoint(x: w * 0.72, y: h * 0.78))
+                        p.addLine(to: CGPoint(x: w * 0.78, y: h * 1.02))
+                        p.addLine(to: CGPoint(x: w * 1.02, y: h * 1.02))
+                        p.closeSubpath()
+                    }
+                    .fill(Onb.mapWater)
+
+                    // River into the bay
+                    Path { p in
+                        p.move(to: CGPoint(x: w * 0.58, y: -4))
+                        p.addCurve(
+                            to: CGPoint(x: w * 0.74, y: h * 0.80),
+                            control1: CGPoint(x: w * 0.70, y: h * 0.30),
+                            control2: CGPoint(x: w * 0.60, y: h * 0.58)
+                        )
+                    }
+                    .stroke(Onb.mapWater, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+
+                    // Parks
+                    Ellipse().fill(Onb.mapPark)
+                        .frame(width: w * 0.20, height: h * 0.13)
+                        .position(x: w * 0.33, y: h * 0.47)
+                    Ellipse().fill(Onb.mapPark)
+                        .frame(width: w * 0.13, height: h * 0.08)
+                        .position(x: w * 0.57, y: h * 0.16)
+
+                    // Faint roads
+                    Path { p in
+                        p.move(to: CGPoint(x: 0, y: h * 0.5)); p.addLine(to: CGPoint(x: w * 0.82, y: h * 0.5))
+                        p.move(to: CGPoint(x: w * 0.42, y: 0)); p.addLine(to: CGPoint(x: w * 0.42, y: h))
+                        p.move(to: CGPoint(x: w * 0.1, y: h)); p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.2))
+                    }
+                    .stroke(Color.white.opacity(0.55), lineWidth: 2)
+
+                    // Dashed journey route through the pins
+                    Path { p in
+                        let pts = routeOrder.map { CGPoint(x: w * pins[$0].rx, y: h * pins[$0].ry - 14) }
+                        guard let first = pts.first else { return }
+                        p.move(to: first)
+                        for pt in pts.dropFirst() { p.addLine(to: pt) }
+                    }
+                    .stroke(Onb.accentRedBrown.opacity(0.4),
+                            style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [1, 7]))
+
+                    // Area labels
+                    ForEach(places) { place in
+                        Text(place.label)
+                            .font(.system(size: place.big ? 17 : 13, weight: place.big ? .bold : .semibold))
+                            .foregroundStyle(Onb.ink.opacity(place.big ? 0.72 : 0.5))
+                            .position(x: w * place.rx, y: h * place.ry)
+                    }
+
+                    // Pins
+                    ForEach(pins) { pin in
+                        OnbMapPin(number: pin.number, color: pin.color)
+                            .position(x: w * pin.rx, y: h * pin.ry - 14)
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white, lineWidth: 5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Onb.cardStroke, lineWidth: 1)
+            )
+            .overlay(alignment: .topLeading) {
+                WashiTape(color: Onb.tapeBeige, width: 58, height: 18, angle: -10)
+                    .offset(x: -8, y: -9)
+            }
+            .overlay(alignment: .topTrailing) {
+                WashiTape(color: Onb.tapePink, width: 58, height: 18, angle: 10)
+                    .offset(x: 8, y: -9)
+            }
+            .overlay(alignment: .bottomLeading) {
+                // Legend: pin colors → Best5 / Archive
+                HStack(spacing: 12) {
+                    HStack(spacing: 5) {
+                        Circle().fill(Onb.accentRedBrown).frame(width: 8, height: 8)
+                        Text("Best5")
+                    }
+                    HStack(spacing: 5) {
+                        Circle().fill(Onb.oliveGreen).frame(width: 8, height: 8)
+                        Text("Archive")
+                    }
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Onb.ink.opacity(0.75))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.white.opacity(0.95), in: Capsule())
+                .shadow(color: Onb.paperShadow.opacity(0.15), radius: 4, y: 2)
+                .padding(12)
+            }
+            .shadow(color: Onb.paperShadow.opacity(0.18), radius: 8, y: 5)
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
         }
-        .frame(width: 98, height: 88)
-        .background(AppTheme.softFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(alignment: .top) {
-            TapeDecoration()
-                .offset(y: -6)
-        }
+        .padding(.bottom, 56)
     }
 }
 
-private struct MapPinLabel: View {
-    let text: String
+private struct OnbMapPin: View {
+    let number: Int
     let color: Color
-
     var body: some View {
         VStack(spacing: 0) {
-            Text(text)
-                .font(.headline.weight(.black))
-                .foregroundStyle(.white)
-                .frame(width: 48, height: 48)
-                .background(color, in: Circle())
-            Triangle()
-                .fill(color)
-                .frame(width: 15, height: 11)
+            ZStack {
+                Circle().fill(color)
+                Text("\(number)")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: 32, height: 32)
+            .overlay(Circle().stroke(.white, lineWidth: 2.5))
+            .shadow(color: Onb.paperShadow.opacity(0.28), radius: 3, y: 2)
+
+            Image(systemName: "triangle.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(color)
                 .rotationEffect(.degrees(180))
                 .offset(y: -2)
         }
-        .shadow(color: color.opacity(0.25), radius: 10, y: 5)
     }
 }
 
-private struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
+// MARK: Page 04 — Archive
+
+private struct OnbArchivePage: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            OnbKicker(number: "04", label: "ARCHIVE")
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 18)
+
+            HStack(alignment: .top, spacing: 6) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 0) {
+                        Text("過去の")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(Onb.ink)
+                        Text("名店")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(Onb.accentRedBrown)
+                        Text("も、")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(Onb.ink)
+                    }
+                    HStack(spacing: 6) {
+                        Text("ちゃんと残る")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(Onb.ink)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Onb.accentRedBrown.opacity(0.75))
+                            .offset(y: -8)
+                    }
+                }
+                Spacer()
+                Image(systemName: "archivebox.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Onb.oliveGreen)
+                    .padding(.top, 6)
+            }
+            .padding(.horizontal, Onb.hPad)
+            .padding(.top, 10)
+
+            Text("ベスト圏外になったお店もアーカイブへ。\n思い出はいつでも見返せる。")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Onb.mutedText)
+                .lineSpacing(3)
+                .padding(.horizontal, Onb.hPad)
+                .padding(.top, 8)
+
+            // Archive card
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Image(systemName: "archivebox.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Onb.oliveGreen)
+                    Text("Archive")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(Onb.ink)
+                    Text("24")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(Onb.oliveGreen, in: Capsule())
+                    Spacer()
+                    OnbProBubble()
+                        .offset(y: 2)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+                cardDivider
+                OnbArchiveRow(image: "OnbArchiveRamen", tag: "元2位", name: "麺屋 こころ",
+                              area: "東京 中野", memo: "メモ未登録")
+                cardDivider
+                OnbArchiveRow(image: "OnbArchiveYakitori", tag: nil, name: "炭火焼鳥 とり松",
+                              area: "東京 五反田", memo: "メモ未登録")
+                cardDivider
+                OnbArchiveRow(image: "OnbArchiveTeishoku", tag: nil, name: "大衆食堂 いちは",
+                              area: "神奈川 横浜", memo: "メモ未登録")
+                cardDivider
+                OnbArchiveRow(image: "OnbArchiveCurry", tag: nil, name: "欧風カレー ひだまり",
+                              area: "東京 吉祥寺", memo: "メモ未登録")
+                cardDivider
+                OnbArchiveRow(image: "OnbArchiveKozara", tag: nil, name: "小料理 てまり",
+                              area: "東京 神楽坂", memo: "メモ未登録")
+
+                // "もっと見る" centered inside the dashed pill
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                    Text("もっと見る")
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Onb.mutedText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Onb.ruleLine)
+                )
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .background(Onb.paperWhite)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Onb.cardStroke, lineWidth: 1)
+            )
+            .shadow(color: Onb.paperShadow.opacity(0.1), radius: 10, y: 5)
+            .overlay(alignment: .topLeading) {
+                WashiTape(color: Onb.tapeOlive, width: 58, height: 18, angle: -9)
+                    .offset(x: -6, y: -9)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, 60)
+    }
+
+    private var cardDivider: some View {
+        Rectangle().fill(Onb.ruleLine.opacity(0.5)).frame(height: 1)
+            .padding(.horizontal, 14)
+    }
+}
+
+private struct OnbArchiveRow: View {
+    let image: String
+    let tag: String?
+    let name: String
+    let area: String
+    let memo: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            OnbPhotoCard(image: image, width: 48, height: 48, angle: -1.5, corner: 9)
+
+            VStack(alignment: .leading, spacing: 1) {
+                if let tag {
+                    Text(tag)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Onb.oliveGreen)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(Onb.oliveGreen.opacity(0.14), in: Capsule())
+                }
+                Text(name)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Onb.ink)
+                HStack(spacing: 6) {
+                    Text(area)
+                    Text("・")
+                    Text(memo)
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Onb.mutedText)
+            }
+
+            Spacer(minLength: 4)
+
+            OnbBookmark(filled: true, color: Onb.oliveGreen.opacity(0.85))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+    }
+}
+
+/// Compact "Pro" speech bubble used in the Archive card header.
+private struct OnbProBubble: View {
+    var body: some View {
+        Text("Proでさらに便利に！")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .fixedSize()
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(Onb.oliveGreen, in: Capsule())
+            .rotationEffect(.degrees(-2))
+    }
+}
+
+/// Compact Pro-plan upgrade pill shown next to the BEST 5 heading.
+/// Free → muted outline (upgrade CTA). Pro → terracotta fill (active状態).
+/// Tapping always routes to the Pro plan screen via the provided action.
+struct ProUpgradeBadge: View {
+    let isPro: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text("PRO")
+                    .font(.system(size: 12, weight: .heavy))
+                    .tracking(0.5)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .opacity(isPro ? 0.9 : 0.7)
+            }
+            .foregroundStyle(isPro ? Color.white : AppTheme.muted)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background {
+                if isPro {
+                    Capsule()
+                        .fill(AppTheme.tomato)
+                        .overlay(
+                            Capsule().fill(
+                                LinearGradient(colors: [.white.opacity(0.22), .clear],
+                                               startPoint: .top, endPoint: .bottom)
+                            )
+                        )
+                } else {
+                    Capsule()
+                        .fill(AppTheme.card)
+                        .overlay(Capsule().stroke(AppTheme.hairline, lineWidth: 1.2))
+                }
+            }
+            .shadow(color: AppTheme.ink.opacity(isPro ? 0.18 : 0.07), radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isPro ? "Proプラン（契約中）" : "Proプランにアップグレード")
     }
 }
 
@@ -452,6 +1205,7 @@ struct HomeView: View {
     @State private var selectedSubGenreId = ""
     @State private var formSeed: StoreFormSeed?
     @State private var detailSeed: StoreDetailSeed?
+    @State private var paywallReason: PaywallReason?
     @State private var isGenrePickerPresented = false
     @State private var genrePickerMode: GenrePickerMode = .mainGenres
 
@@ -576,6 +1330,10 @@ struct HomeView: View {
                 .environmentObject(dataStore)
                 .presentationDetents([.medium, .large])
             }
+            .sheet(item: $paywallReason) { reason in
+                PaywallView(reason: reason)
+                    .environmentObject(proState)
+            }
         }
     }
 
@@ -639,14 +1397,9 @@ struct HomeView: View {
                         .rotationEffect(.degrees(-2))
                 }
                 Spacer()
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                    .foregroundStyle(AppTheme.tomato)
-                    .padding(12)
-                    .overlay {
-                        Circle()
-                            .stroke(AppTheme.tomato, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                    }
+                ProUpgradeBadge(isPro: proState.isPro) {
+                    paywallReason = .settings
+                }
             }
 
             VStack(alignment: .leading, spacing: 0) {
@@ -3440,10 +4193,10 @@ struct SettingsView: View {
             }
             .disabled(proState.isLoading)
 
-            Link(destination: RevenueCatConfig.termsURL) {
+            Link(destination: StoreConfig.termsURL) {
                 Label("利用規約", systemImage: "doc.text")
             }
-            Link(destination: RevenueCatConfig.privacyURL) {
+            Link(destination: StoreConfig.privacyURL) {
                 Label("プライバシーポリシー", systemImage: "lock")
             }
         }

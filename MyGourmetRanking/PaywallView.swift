@@ -75,71 +75,110 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     let reason: PaywallReason
 
+    private struct ProFeature: Identifiable {
+        let id = UUID()
+        let icon: String
+        let title: String
+        let detail: String
+    }
+
+    private let features: [ProFeature] = [
+        .init(icon: "archivebox.fill",
+              title: "Archiveを無制限に",
+              detail: "過去の名店も惜しくも圏外の店も、何件でも残せる"),
+        .init(icon: "map.fill",
+              title: "グルメMapを完全解放",
+              detail: "全店舗・Archive・フィルターを地図で見渡せる"),
+        .init(icon: "slider.horizontal.3",
+              title: "ジャンル・種類を自由に編集",
+              detail: "自分だけの分類でランキングを育てられる")
+    ]
+
+    private var proFeatures: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            ForEach(features) { feature in
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: feature.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(AppTheme.tomato)
+                        .frame(width: 30, height: 30)
+                        .background(AppTheme.tomato.opacity(0.1), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(feature.title)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(AppTheme.ink)
+                        Text(feature.detail)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.softText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .frame(maxWidth: 320)
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
 
-                VStack(spacing: 24) {
-                    Spacer()
+                VStack(spacing: 0) {
+                    Spacer().frame(height: 12)
 
                     Image(systemName: reason.heroIcon)
-                        .font(.system(size: 42, weight: .medium))
+                        .font(.system(size: 40, weight: .regular))
                         .foregroundStyle(AppTheme.tomato)
+                        .padding(.bottom, 26)
 
-                    VStack(spacing: 10) {
-                        Text(reason.heroTitle.replacingOccurrences(of: "\n", with: ""))
-                            .font(.system(size: 28, weight: .black, design: .rounded))
-                            .foregroundStyle(AppTheme.ink)
-                            .multilineTextAlignment(.center)
+                    Text(reason.heroTitle)
+                        .font(.system(size: 27, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.ink)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(6)
 
-                        Text(reason.message)
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.softText)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                            .frame(maxWidth: 310)
-                    }
+                    Spacer()
 
-                    HStack(spacing: 16) {
-                        featureChip("Archive無制限")
-                        featureChip("Map完全解放")
-                        featureChip("ジャンル編集")
-                    }
+                    proFeatures
+                        .padding(.horizontal, 8)
 
-                    VStack(spacing: 10) {
+                    Spacer()
+
+                    VStack(spacing: 14) {
                         Button {
                             Task { await proState.purchasePro() }
                         } label: {
                             Text(proState.isLoading ? "処理中..." : "Proを購入する \(proState.displayPrice)")
-                                .font(.headline.weight(.black))
+                                .font(.headline.weight(.bold))
                                 .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(AppTheme.tomato)
+                        .controlSize(.large)
                         .disabled(proState.isLoading || proState.isPro)
 
-                        Text("買い切り。一度の購入でずっと使えます。")
+                        Text("買い切り・一度の購入でずっと使えます")
                             .font(.caption)
                             .foregroundStyle(AppTheme.muted)
-                    }
 
-                    Spacer()
-
-                    HStack(spacing: 18) {
-                        Button("無料ではじめる") { dismiss() }
-                        Button("購入を復元") {
-                            Task { await proState.restorePurchases() }
+                        HStack(spacing: 20) {
+                            Button("購入を復元") {
+                                Task { await proState.restorePurchases() }
+                            }
+                            Link("利用規約", destination: StoreConfig.termsURL)
+                            Link("プライバシーポリシー", destination: StoreConfig.privacyURL)
                         }
-                        Link("利用規約", destination: RevenueCatConfig.termsURL)
-                        Link("プライバシーポリシー", destination: RevenueCatConfig.privacyURL)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(AppTheme.muted)
+                        .padding(.top, 4)
                     }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(AppTheme.muted)
                 }
-                .padding(24)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 28)
             }
-            .navigationTitle(reason.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -156,17 +195,6 @@ struct PaywallView: View {
             } message: {
                 Text(proState.message ?? "")
             }
-        }
-    }
-
-    private func featureChip(_ title: String) -> some View {
-        VStack(spacing: 7) {
-            Circle()
-                .fill(AppTheme.tomato.opacity(0.1))
-                .frame(width: 7, height: 7)
-            Text(title)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(AppTheme.softText)
         }
     }
 }

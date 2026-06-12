@@ -1,6 +1,9 @@
 import Foundation
-import RevenueCat
+import StoreKit
 
+/// Owns the Pro-unlock entitlement using StoreKit 2 directly (no third-party SDK).
+/// The public surface (`isPro`, `displayPrice`, `purchasePro`, `restorePurchases`)
+/// is intentionally unchanged so the paywall and feature gates keep working.
 @MainActor
 final class ProState: ObservableObject {
     @Published private(set) var isPro = false
@@ -8,53 +11,41 @@ final class ProState: ObservableObject {
     @Published private(set) var displayPrice = "¥500"
     @Published var message: String?
 
-    private var proPackage: Package?
-    private var hasConfiguredRevenueCat = false
+    private var product: Product?
+    private var updatesTask: Task<Void, Never>?
+    private var hasConfigured = false
 
     func configure() {
-        guard !hasConfiguredRevenueCat else { return }
-        hasConfiguredRevenueCat = true
+        guard !hasConfigured else { return }
+        hasConfigured = true
 
-        if RevenueCatConfig.forceProForUAT {
+        if StoreConfig.forceProForUAT {
             isPro = true
         }
 
-        guard RevenueCatConfig.isConfigured else {
-            if !RevenueCatConfig.forceProForUAT {
-                message = "RevenueCatのSDK Keyが未設定です。公開前に設定してください。"
+        // Observe transactions that arrive outside an explicit purchase call:
+        // Ask-to-Buy approvals, purchases made on another device, and refunds.
+        updatesTask = Task { [weak self] in
+            for await update in Transaction.updates {
+                await self?.handle(update)
             }
-            return
         }
-
-        Purchases.logLevel = .warn
-        Purchases.configure(withAPIKey: RevenueCatConfig.publicSDKKey)
 
         Task {
-            await refreshCustomerInfo()
-            await loadOffering()
+            await loadProduct()
+            await refreshEntitlements()
         }
     }
 
-    func refreshCustomerInfo() async {
-        guard RevenueCatConfig.isConfigured else { return }
-        isLoading = true
-        defer { isLoading = false }
-
-        do {
-            let customerInfo = try await Purchases.shared.customerInfo()
-            apply(customerInfo)
-        } catch {
-            message = "購入状態を確認できませんでした。通信状態を確認してもう一度お試しください。"
-        }
+    deinit {
+        updatesTask?.cancel()
     }
 
-    func loadOffering() async {
-        guard RevenueCatConfig.isConfigured else { return }
-
+    func loadProduct() async {
         do {
-            let offerings = try await Purchases.shared.offerings()
-            proPackage = offerings.current?.availablePackages.first
-            if let price = proPackage?.storeProduct.localizedPriceString {
+            let products = try await Product.products(for: [StoreConfig.proProductID])
+            product = products.first
+            if let price = product?.displayPrice {
                 displayPrice = price
             }
         } catch {
@@ -62,18 +53,25 @@ final class ProState: ObservableObject {
         }
     }
 
+    /// Re-derives `isPro` from the current StoreKit entitlements.
+    func refreshEntitlements() async {
+        var entitled = false
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else { continue }
+            if transaction.productID == StoreConfig.proProductID,
+               transaction.revocationDate == nil {
+                entitled = true
+            }
+        }
+        applyEntitled(entitled)
+    }
+
     func purchasePro() async {
-        guard RevenueCatConfig.isConfigured else {
-            message = "RevenueCatのSDK Keyが未設定です。公開前に設定してください。"
-            return
+        if product == nil {
+            await loadProduct()
         }
-
-        if proPackage == nil {
-            await loadOffering()
-        }
-
-        guard let proPackage else {
-            message = "Pro商品が見つかりませんでした。RevenueCatのOffering設定を確認してください。"
+        guard let product else {
+            message = "Pro商品が見つかりませんでした。時間をおいて再度お試しください。"
             return
         }
 
@@ -81,10 +79,19 @@ final class ProState: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let result = try await Purchases.shared.purchase(package: proPackage)
-            apply(result.customerInfo)
-            if !result.userCancelled, isPro {
-                message = "Proが有効になりました。"
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                await handle(verification)
+                if isPro {
+                    message = "Proが有効になりました。"
+                }
+            case .userCancelled:
+                break
+            case .pending:
+                message = "購入は承認待ちです。完了するとProが有効になります。"
+            @unknown default:
+                break
             }
         } catch {
             message = "購入を完了できませんでした。もう一度お試しください。"
@@ -92,25 +99,25 @@ final class ProState: ObservableObject {
     }
 
     func restorePurchases() async {
-        guard RevenueCatConfig.isConfigured else {
-            message = "RevenueCatのSDK Keyが未設定です。公開前に設定してください。"
-            return
-        }
-
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            let customerInfo = try await Purchases.shared.restorePurchases()
-            apply(customerInfo)
-            message = isPro ? "購入を復元しました。" : "復元できるPro購入が見つかりませんでした。"
-        } catch {
-            message = "購入を復元できませんでした。もう一度お試しください。"
-        }
+        // AppStore.sync() re-syncs the receipt; it throws if the user cancels the
+        // App Store sign-in sheet, in which case we still re-check entitlements.
+        try? await AppStore.sync()
+        await refreshEntitlements()
+        message = isPro ? "購入を復元しました。" : "復元できるPro購入が見つかりませんでした。"
     }
 
-    private func apply(_ customerInfo: CustomerInfo) {
-        isPro = RevenueCatConfig.forceProForUAT
-            || customerInfo.entitlements[RevenueCatConfig.entitlementIdentifier]?.isActive == true
+    private func handle(_ verification: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = verification else { return }
+        if transaction.productID == StoreConfig.proProductID {
+            applyEntitled(transaction.revocationDate == nil)
+        }
+        await transaction.finish()
+    }
+
+    private func applyEntitled(_ entitled: Bool) {
+        isPro = StoreConfig.forceProForUAT || entitled
     }
 }

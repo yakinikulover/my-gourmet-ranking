@@ -49,6 +49,9 @@
             ReferencedContainer = "container:MyGourmetRanking.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <StoreKitConfigurationFileReference
+         identifier = "../../../MyGourmetRanking/GourmetRank.storekit">
+      </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

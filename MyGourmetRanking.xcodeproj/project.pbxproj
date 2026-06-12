@@ -16,10 +16,9 @@
 		7D2B7C8A2C7A4F5100010007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */; };
 		7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */; };
 		7D2B7C8A2C7A4F5100010009 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */; };
-		7D2B7C8A2C7A4F510001000A /* RevenueCatConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001A /* RevenueCatConfig.swift */; };
+		7D2B7C8A2C7A4F510001000A /* StoreConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001A /* StoreConfig.swift */; };
 		7D2B7C8A2C7A4F510001000B /* ProState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001B /* ProState.swift */; };
 		7D2B7C8A2C7A4F510001000C /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001C /* PaywallView.swift */; };
-		7D2B7C8A2C7A4F510001000D /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2B7C8A2C7A4F51000100D0 /* RevenueCat */; };
 		7D2B7C8A2C7A4F510001000E /* ProAccessPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */; };
 		7D2B7C8A2C7A4F510001000F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7D2B7C8A2C7A4F510001001E /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -35,7 +34,7 @@
 		7D2B7C8A2C7A4F5100010017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStorage.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
-		7D2B7C8A2C7A4F510001001A /* RevenueCatConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatConfig.swift; sourceTree = "<group>"; };
+		7D2B7C8A2C7A4F510001001A /* StoreConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreConfig.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F510001001B /* ProState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProState.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F510001001C /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProAccessPolicy.swift; sourceTree = "<group>"; };
@@ -47,7 +46,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7D2B7C8A2C7A4F510001000D /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,7 +71,7 @@
 				7D2B7C8A2C7A4F5100010016 /* Views.swift */,
 				7D2B7C8A2C7A4F5100010018 /* ImageStorage.swift */,
 				7D2B7C8A2C7A4F5100010019 /* LocationManager.swift */,
-				7D2B7C8A2C7A4F510001001A /* RevenueCatConfig.swift */,
+				7D2B7C8A2C7A4F510001001A /* StoreConfig.swift */,
 				7D2B7C8A2C7A4F510001001B /* ProState.swift */,
 				7D2B7C8A2C7A4F510001001C /* PaywallView.swift */,
 				7D2B7C8A2C7A4F510001001D /* ProAccessPolicy.swift */,
@@ -107,9 +105,6 @@
 			dependencies = (
 			);
 			name = MyGourmetRanking;
-			packageProductDependencies = (
-				7D2B7C8A2C7A4F51000100D0 /* RevenueCat */,
-			);
 			productName = MyGourmetRanking;
 			productReference = 7D2B7C8A2C7A4F5100010010 /* MyGourmetRanking.app */;
 			productType = "com.apple.product-type.application";
@@ -139,9 +134,6 @@
 				Base,
 			);
 			mainGroup = 7D2B7C8A2C7A4F5100010030;
-			packageReferences = (
-				7D2B7C8A2C7A4F51000100C0 /* XCRemoteSwiftPackageReference "purchases-ios" */,
-			);
 			productRefGroup = 7D2B7C8A2C7A4F5100010032 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -176,7 +168,7 @@
 				7D2B7C8A2C7A4F5100010006 /* Views.swift in Sources */,
 				7D2B7C8A2C7A4F5100010008 /* ImageStorage.swift in Sources */,
 				7D2B7C8A2C7A4F5100010009 /* LocationManager.swift in Sources */,
-				7D2B7C8A2C7A4F510001000A /* RevenueCatConfig.swift in Sources */,
+				7D2B7C8A2C7A4F510001000A /* StoreConfig.swift in Sources */,
 				7D2B7C8A2C7A4F510001000B /* ProState.swift in Sources */,
 				7D2B7C8A2C7A4F510001000C /* PaywallView.swift in Sources */,
 				7D2B7C8A2C7A4F510001000E /* ProAccessPolicy.swift in Sources */,
@@ -313,6 +305,7 @@
 				DEVELOPMENT_TEAM = NL945Q9D64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地周辺の飲食店候補を検索して、グルメMapへ登録するために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -325,7 +318,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yakinikulover.MyGourmetRanking;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mysmallgoodapps.gourmetrank;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -346,6 +339,7 @@
 				DEVELOPMENT_TEAM = NL945Q9D64;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Gourmet Ranking";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "現在地周辺の飲食店候補を検索して、グルメMapへ登録するために使用します。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -358,7 +352,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yakinikulover.MyGourmetRanking;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mysmallgoodapps.gourmetrank;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -392,24 +386,7 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		7D2B7C8A2C7A4F51000100C0 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
 
-/* Begin XCSwiftPackageProductDependency section */
-		7D2B7C8A2C7A4F51000100D0 /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7D2B7C8A2C7A4F51000100C0 /* XCRemoteSwiftPackageReference "purchases-ios" */;
-			productName = RevenueCat;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7D2B7C8A2C7A4F5100010080 /* Project object */;
 }

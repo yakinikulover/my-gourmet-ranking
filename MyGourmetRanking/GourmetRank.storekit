@@ -1,0 +1,27 @@
+{
+  "identifier": "56200623-9E35-4233-9006-27DD02500847",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "500",
+      "familyShareable": false,
+      "internalID": "3A094A3A-570C-473D-914B-00F20FB5DC6E",
+      "localizations": [
+        {
+          "description": "Archive無制限・グルメMap完全解放・ジャンル編集を解放する買い切りのProプランです。",
+          "displayName": "Gourmet Rank Pro",
+          "locale": "ja_JP"
+        }
+      ],
+      "productID": "com.mysmallgoodapps.gourmetrank.pro",
+      "referenceName": "Pro Unlock",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {},
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}
