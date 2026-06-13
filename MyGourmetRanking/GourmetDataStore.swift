@@ -15,6 +15,11 @@ final class GourmetDataStore: ObservableObject {
         didSet { save(subGenres, key: StorageKey.subGenres) }
     }
 
+    /// True while showing read-only sample/demo data. Nothing is persisted in this
+    /// mode, and the user's real (empty) data is restored on exit.
+    @Published private(set) var isSampleMode = false
+    private var suppressPersistence = false
+
     private enum StorageKey {
         static let stores = "my-gourmet-ranking.stores"
         static let mainGenres = "my-gourmet-ranking.main-genres"
@@ -28,6 +33,25 @@ final class GourmetDataStore: ObservableObject {
         mainGenres = Self.load([MainGenre].self, key: StorageKey.mainGenres) ?? InitialGenres.mainGenres
         subGenres = Self.load([SubGenre].self, key: StorageKey.subGenres) ?? InitialGenres.subGenres
         migrateTaxonomyIfNeeded()
+    }
+
+    // MARK: Sample experience
+
+    /// Loads demo data into memory without persisting it, so the user can explore a
+    /// fully-grown 店帳 (Best5 / Map / Archive). Genres stay as the defaults.
+    func enterSampleMode() {
+        guard !isSampleMode else { return }
+        suppressPersistence = true
+        stores = InitialGenres.sampleStores
+        isSampleMode = true
+    }
+
+    /// Discards the sample data and restores the user's real (untouched) stores.
+    func exitSampleMode() {
+        guard isSampleMode else { return }
+        isSampleMode = false
+        stores = Self.load([Store].self, key: StorageKey.stores) ?? []
+        suppressPersistence = false
     }
 
     var sortedMainGenres: [MainGenre] {
@@ -421,6 +445,7 @@ final class GourmetDataStore: ObservableObject {
     }
 
     private func save<T: Encodable>(_ value: T, key: String) {
+        guard !suppressPersistence else { return }
         guard let data = try? JSONEncoder().encode(value) else {
             return
         }

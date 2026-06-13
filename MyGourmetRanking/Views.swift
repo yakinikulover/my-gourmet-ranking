@@ -86,31 +86,68 @@ extension View {
 
 struct ContentView: View {
     @AppStorage("hasCompletedOnboardingV3") private var hasCompletedOnboarding = false
-    @AppStorage("hasSeenIntroPaywallV1") private var hasSeenIntroPaywall = false
+    @AppStorage("hasChosenStartModeV1") private var hasChosenStartMode = false
+    @AppStorage("hasSeenIntroPaywallV2") private var hasSeenIntroPaywall = false
+    @EnvironmentObject private var dataStore: GourmetDataStore
     @EnvironmentObject private var proState: ProState
     @State private var isIntroPaywallPresented = false
 
     var body: some View {
         Group {
-            if hasCompletedOnboarding {
-                mainTabs
-            } else {
+            if !hasCompletedOnboarding {
                 OnboardingView {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
                         hasCompletedOnboarding = true
                     }
-                    if !proState.isPro, !hasSeenIntroPaywall {
-                        hasSeenIntroPaywall = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                            isIntroPaywallPresented = true
+                }
+            } else if !hasChosenStartMode {
+                // After onboarding: optional "experience the finished app" choice.
+                SampleChoiceView(
+                    onTrySample: {
+                        dataStore.enterSampleMode()
+                        proState.setSampleUnlock(true)
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                            hasChosenStartMode = true
                         }
+                    },
+                    onStartFresh: {
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.86)) {
+                            hasChosenStartMode = true
+                        }
+                        presentIntroPaywallIfNeeded()
                     }
+                )
+            } else {
+                VStack(spacing: 0) {
+                    if dataStore.isSampleMode {
+                        SampleModeBanner(onExit: leaveSample)
+                    }
+                    mainTabs
                 }
             }
         }
         .fullScreenCover(isPresented: $isIntroPaywallPresented) {
             PaywallView(reason: .onboarding)
                 .environmentObject(proState)
+        }
+    }
+
+    /// Discards the sample data and starts the user's own (empty) 店帳,
+    /// then offers Pro once now that the user has seen the app's value.
+    private func leaveSample() {
+        proState.setSampleUnlock(false)
+        withAnimation(.easeInOut) {
+            dataStore.exitSampleMode()
+        }
+        presentIntroPaywallIfNeeded()
+    }
+
+    /// Shows the intro paywall a single time when the user starts their own 店帳.
+    private func presentIntroPaywallIfNeeded() {
+        guard !proState.isPro, !hasSeenIntroPaywall else { return }
+        hasSeenIntroPaywall = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            isIntroPaywallPresented = true
         }
     }
 
@@ -132,6 +169,105 @@ struct ContentView: View {
                 }
         }
         .tint(AppTheme.tomato)
+    }
+}
+
+// MARK: - Sample experience
+
+/// Shown once after onboarding: try a fully-grown demo 店帳, or start fresh.
+private struct SampleChoiceView: View {
+    let onTrySample: () -> Void
+    let onStartFresh: () -> Void
+
+    var body: some View {
+        ZStack {
+            AppTheme.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer()
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 38, weight: .regular))
+                    .foregroundStyle(AppTheme.tomato)
+                    .padding(.bottom, 22)
+
+                Text("完成イメージを\n体験してみませんか？")
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.ink)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(5)
+
+                Text("サンプルの店帳で、Best5・グルメMap・Archiveが\nどう育つかを先に体験できます。")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.softText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.top, 14)
+                    .padding(.horizontal, 24)
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    Button(action: onTrySample) {
+                        Text("完成イメージを体験する")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(AppTheme.tomato)
+                    .controlSize(.large)
+
+                    Button(action: onStartFresh) {
+                        Text("すぐにはじめる")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(AppTheme.softText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+
+                    Text("サンプルは保存されません。いつでも自分の店帳に切り替えられます。")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.muted)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 28)
+            }
+        }
+    }
+}
+
+/// Persistent top bar shown during the sample experience.
+private struct SampleModeBanner: View {
+    let onExit: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "eye.fill")
+                    .font(.system(size: 12, weight: .bold))
+                Text("サンプル体験中")
+                    .font(.system(size: 13, weight: .bold))
+            }
+            .foregroundStyle(.white)
+
+            Spacer(minLength: 8)
+
+            Button(action: onExit) {
+                Text("自分の店帳を作る")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(AppTheme.tomato)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.white, in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(AppTheme.tomato)
     }
 }
 
@@ -2804,16 +2940,22 @@ enum StoreCardStyle {
 enum StoreImageSource: Identifiable, Equatable {
     case local(String)
     case remote(String)
+    case asset(String)
 
     var id: String {
         switch self {
         case .local(let fileName): "local-\(fileName)"
         case .remote(let url): "remote-\(url)"
+        case .asset(let name): "asset-\(name)"
         }
     }
 }
 
 extension Store {
+    /// Bundled-asset images are referenced by storing "asset:<AssetName>" in
+    /// imageUrl (used by the sample/demo data so it works offline).
+    static let assetImagePrefix = "asset:"
+
     var imageSources: [StoreImageSource] {
         let localSources = (imageFileNames ?? []).map(StoreImageSource.local)
         if !localSources.isEmpty {
@@ -2821,6 +2963,9 @@ extension Store {
         }
         guard let imageUrl else {
             return []
+        }
+        if imageUrl.hasPrefix(Store.assetImagePrefix) {
+            return [.asset(String(imageUrl.dropFirst(Store.assetImagePrefix.count)))]
         }
         return [.remote(imageUrl)]
     }
@@ -3156,6 +3301,12 @@ struct StoreImageContent<Placeholder: View>: View {
                             placeholder
                         }
                     }
+                } else {
+                    placeholder
+                }
+            case .asset(let assetName):
+                if UIImage(named: assetName) != nil {
+                    configuredImage(Image(assetName))
                 } else {
                     placeholder
                 }

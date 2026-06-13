@@ -14,6 +14,8 @@ final class ProState: ObservableObject {
     private var product: Product?
     private var updatesTask: Task<Void, Never>?
     private var hasConfigured = false
+    private var realEntitled = false
+    private var sampleUnlock = false
 
     func configure() {
         guard !hasConfigured else { return }
@@ -118,6 +120,18 @@ final class ProState: ObservableObject {
     }
 
     private func applyEntitled(_ entitled: Bool) {
-        isPro = StoreConfig.forceProForUAT || entitled
+        realEntitled = entitled
+        recomputePro()
+    }
+
+    /// Temporarily grants Pro access for the sample-experience mode (no purchase,
+    /// no persistence). Cleared when the user leaves the sample.
+    func setSampleUnlock(_ on: Bool) {
+        sampleUnlock = on
+        recomputePro()
+    }
+
+    private func recomputePro() {
+        isPro = StoreConfig.forceProForUAT || realEntitled || sampleUnlock
     }
 }

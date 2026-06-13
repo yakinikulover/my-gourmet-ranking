@@ -179,117 +179,94 @@ enum InitialGenres {
         }
     }
 
+    // Sample/demo data for the "完成イメージを体験する" experience.
+    // Real Tokyo restaurants across several genres. The first 13 have map
+    // coordinates (shown as pins); the last 10 have none, so they appear in
+    // "Map未登録を整理". This data is never persisted as the user's own.
+    // Sample thumbnails are bundled assets (offline-safe). Drop real food photos
+    // into these imagesets to replace the placeholders — see SAMPLE_IMAGE_SLOTS.md.
+    private static let imgRamen = "asset:SampleRamen"
+    private static let imgSushi = "asset:SampleSushi"
+    private static let imgMeat = "asset:SampleYakiniku"
+    private static let imgNabe = "asset:SampleSukiyaki"
+    private static let imgCafe = "asset:SampleCafe"
+    private static let imgFood = "asset:SampleYakitori"
+    private static let imgSet = "asset:SampleTeishoku"
+    private static let imgCurry = "asset:SampleCurry"
+
     static let sampleStores: [Store] = [
-        sampleStore(
-            id: "sample-sukiyaki-1",
-            name: "銀座 霜降り研究所",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .rank1,
-            previousRank: nil,
-            area: "銀座",
-            memo: "割下の香りが強くて、卵まで主役になる一皿。",
-            imageUrl: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sukiyaki-2",
-            name: "浅草 鍋と月",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .rank2,
-            previousRank: nil,
-            area: "浅草",
-            memo: "落ち着いた店内。甘めの味付けで友達にも紹介しやすい。",
-            imageUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sukiyaki-3",
-            name: "恵比寿 牛鍋ネオン",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .rank3,
-            previousRank: nil,
-            area: "恵比寿",
-            memo: "少し今っぽい雰囲気。デート用途ならかなり強い。",
-            imageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sukiyaki-5",
-            name: "日本橋 すき焼き灯",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .rank5,
-            previousRank: nil,
-            area: "日本橋",
-            memo: "ランチの満足度が高い。4位はあえてTBDにして比較用。",
-            imageUrl: "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sukiyaki-archive-1",
-            name: "神楽坂 甘辛亭",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .archive,
-            previousRank: 4,
-            area: "神楽坂",
-            memo: "前は4位。おいしいけど再訪優先度は少し下がった。",
-            imageUrl: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sukiyaki-archive-2",
-            name: "渋谷 夜鍋スタンド",
-            mainGenreId: "japanese",
-            subGenreId: "japanese-8",
-            rank: .archive,
-            previousRank: nil,
-            area: "渋谷",
-            memo: "未ランクイン。深夜に使えるけどBest入りは保留。",
-            imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-sushi-1",
-            name: "青山 鮨ミニマル",
-            mainGenreId: "sushi-seafood",
-            subGenreId: "sushi-seafood-2",
-            rank: .rank1,
-            previousRank: nil,
-            area: "青山",
-            memo: "小ぶりでテンポが良い。ひとりでも入りやすい鮨。",
-            imageUrl: "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-ramen-1",
-            name: "代々木 余韻つけ麺",
-            mainGenreId: "ramen",
-            subGenreId: "ramen-8",
-            rank: .rank1,
-            previousRank: nil,
-            area: "代々木",
-            memo: "魚介の余韻が長い。並んでも許せる完成度。",
-            imageUrl: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-cafe-1",
-            name: "表参道 Cloud Brew",
-            mainGenreId: "cafe-sweets",
-            subGenreId: "cafe-sweets-2",
-            rank: .rank1,
-            previousRank: nil,
-            area: "表参道",
-            memo: "席間が広くて作業しやすい。ラテもちゃんとうまい。",
-            imageUrl: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=80"
-        ),
-        sampleStore(
-            id: "sample-burger-1",
-            name: "中目黒 Bite Club",
-            mainGenreId: "fast-light",
-            subGenreId: "fast-light-2",
-            rank: .rank1,
-            previousRank: nil,
-            area: "中目黒",
-            memo: "肉感強め。ポテトまでちゃんと覚えている店。",
-            imageUrl: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80"
-        )
+        // ── ラーメン・麺（最多＝既定表示・Best5が埋まる + Archive） ──
+        sampleStore(id: "sample-ramen-1", name: "中華そば 青葉 中野本店", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .rank1, area: "東京 中野", memo: "ダブルスープの原点。何度でも戻ってきたくなる一杯。",
+                    imageUrl: imgRamen, latitude: 35.7068, longitude: 139.6659),
+        sampleStore(id: "sample-ramen-2", name: "麺屋 一燈", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .rank2, area: "東京 新小岩", memo: "濃厚魚介がとにかく丁寧。並ぶ価値あり。",
+                    imageUrl: imgRamen, latitude: 35.7166, longitude: 139.8585),
+        sampleStore(id: "sample-ramen-3", name: "AFURI 恵比寿", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .rank3, area: "東京 恵比寿", memo: "柚子塩の爽やかさ。重くないので〆にも。",
+                    imageUrl: imgRamen, latitude: 35.6464, longitude: 139.7100),
+        sampleStore(id: "sample-ramen-5", name: "蒙古タンメン中本 上板橋", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .rank5, area: "東京 上板橋", memo: "辛さがクセになる。4位はあえて空けて比較中。",
+                    imageUrl: imgRamen, latitude: 35.7616, longitude: 139.6740),
+        sampleStore(id: "sample-ramen-arc-1", name: "三田製麺所 三田本店", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .archive, previousRank: 4, area: "東京 三田", memo: "前は4位。つけ汁は好きだけど再訪頻度は落ちた。",
+                    imageUrl: imgRamen, latitude: 35.6485, longitude: 139.7470),
+        sampleStore(id: "sample-ramen-arc-2", name: "せたが屋 駒沢本店", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .archive, area: "東京 駒沢", memo: "深夜に染みる醤油。Best入りは保留。",
+                    imageUrl: imgRamen, latitude: 35.6262, longitude: 139.6620),
+
+        // ── 寿司・海鮮 ──
+        sampleStore(id: "sample-sushi-1", name: "寿司大 豊洲市場", mainGenreId: "sushi-seafood", subGenreId: "sushi-seafood-1",
+                    rank: .rank1, area: "東京 豊洲", memo: "朝から並ぶ価値。おまかせの満足度が段違い。",
+                    imageUrl: imgSushi, latitude: 35.6449, longitude: 139.7860),
+        sampleStore(id: "sample-sushi-2", name: "立喰い寿司 魚がし日本一 新橋店", mainGenreId: "sushi-seafood", subGenreId: "sushi-seafood-1",
+                    rank: .rank2, area: "東京 新橋", memo: "サクッと立ち食い。コスパと鮮度のバランス◎。",
+                    imageUrl: imgSushi, latitude: 35.6662, longitude: 139.7585),
+
+        // ── 焼肉・肉料理 ──
+        sampleStore(id: "sample-meat-1", name: "焼肉 トラジ 恵比寿本店", mainGenreId: "meat", subGenreId: "meat-1",
+                    rank: .rank1, area: "東京 恵比寿", memo: "接待でも普段でも。タレ焼肉の安定感。",
+                    imageUrl: imgMeat, latitude: 35.6470, longitude: 139.7110),
+        sampleStore(id: "sample-meat-2", name: "スタミナ苑", mainGenreId: "meat", subGenreId: "meat-1",
+                    rank: .rank2, area: "東京 鹿浜", memo: "並んででも食べたいホルモン。遠征の価値あり。",
+                    imageUrl: imgMeat, latitude: 35.7860, longitude: 139.7895),
+
+        // ── 和食・すき焼き ──
+        sampleStore(id: "sample-japanese-1", name: "人形町 今半 本店", mainGenreId: "japanese", subGenreId: "japanese-1",
+                    rank: .rank1, area: "東京 人形町", memo: "王道のすき焼き。割下の余韻まで上品。",
+                    imageUrl: imgNabe, latitude: 35.6856, longitude: 139.7820),
+
+        // ── 焼鳥・串 ──
+        sampleStore(id: "sample-yakitori-1", name: "鳥茶屋 別亭", mainGenreId: "yakitori-kushi", subGenreId: "yakitori-kushi-1",
+                    rank: .rank1, area: "東京 神楽坂", memo: "炭の香りが効いた一本。うどんすきも有名。",
+                    imageUrl: imgFood, latitude: 35.7010, longitude: 139.7400),
+
+        // ── カフェ・スイーツ ──
+        sampleStore(id: "sample-cafe-1", name: "ブルーボトルコーヒー 清澄白河", mainGenreId: "cafe-sweets", subGenreId: "cafe-sweets-1",
+                    rank: .rank1, area: "東京 清澄白河", memo: "一杯ずつ淹れる丁寧さ。空間も気持ちいい。",
+                    imageUrl: imgCafe, latitude: 35.6817, longitude: 139.7980),
+
+        // ── Map未登録（10件・座標なし → 「Map未登録を整理」に出る） ──
+        sampleStore(id: "sample-un-1", name: "すしざんまい 築地本店", mainGenreId: "sushi-seafood", subGenreId: "sushi-seafood-1",
+                    rank: .rank3, area: "東京 築地", memo: "24時間の安心感。場所はあとで登録予定。", imageUrl: imgSushi),
+        sampleStore(id: "sample-un-2", name: "叙々苑 游玄亭 西麻布", mainGenreId: "meat", subGenreId: "meat-1",
+                    rank: .rank3, area: "東京 西麻布", memo: "特別な日の焼肉。", imageUrl: imgMeat),
+        sampleStore(id: "sample-un-3", name: "天丼 金子半之助 日本橋本店", mainGenreId: "setmeal-don", subGenreId: "setmeal-don-1",
+                    rank: .rank1, area: "東京 日本橋", memo: "穴子が立つ天丼。", imageUrl: imgSet),
+        sampleStore(id: "sample-un-4", name: "とんかつ まい泉 青山本店", mainGenreId: "setmeal-don", subGenreId: "setmeal-don-1",
+                    rank: .rank2, area: "東京 青山", memo: "やわらかヒレ。", imageUrl: imgSet),
+        sampleStore(id: "sample-un-5", name: "喫茶 トリコロール 本店", mainGenreId: "cafe-sweets", subGenreId: "cafe-sweets-1",
+                    rank: .rank2, area: "東京 銀座", memo: "ネルドリップの王道喫茶。", imageUrl: imgCafe),
+        sampleStore(id: "sample-un-6", name: "カレーハウス CoCo壱番屋 新宿東口店", mainGenreId: "curry-ethnic", subGenreId: "curry-ethnic-1",
+                    rank: .rank1, area: "東京 新宿", memo: "間違いない安心のカレー。", imageUrl: imgCurry),
+        sampleStore(id: "sample-un-7", name: "鳥貴族 新宿東口店", mainGenreId: "yakitori-kushi", subGenreId: "yakitori-kushi-1",
+                    rank: .rank2, area: "東京 新宿", memo: "気軽に串たくさん。", imageUrl: imgFood),
+        sampleStore(id: "sample-un-8", name: "一蘭 渋谷スペイン坂店", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .archive, area: "東京 渋谷", memo: "集中して食べたい日に。", imageUrl: imgRamen),
+        sampleStore(id: "sample-un-9", name: "大勝軒 永福町", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .archive, area: "東京 永福町", memo: "量も満足の中華そば。", imageUrl: imgRamen),
+        sampleStore(id: "sample-un-10", name: "銀座 篝 本店", mainGenreId: "ramen", subGenreId: "ramen-1",
+                    rank: .archive, area: "東京 銀座", memo: "鶏白湯SOBA。並びは覚悟。", imageUrl: imgRamen)
     ]
 
     private static func sampleStore(
@@ -298,12 +275,15 @@ enum InitialGenres {
         mainGenreId: String,
         subGenreId: String,
         rank: StoreRank,
-        previousRank: Int?,
+        previousRank: Int? = nil,
         area: String,
         memo: String,
-        imageUrl: String
+        imageUrl: String,
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) -> Store {
-        Store(
+        let hasCoordinate = latitude != nil && longitude != nil
+        return Store(
             id: id,
             name: name,
             mainGenreId: mainGenreId,
@@ -313,7 +293,9 @@ enum InitialGenres {
             area: area,
             memo: memo,
             imageUrl: imageUrl,
-            mapUrl: "https://maps.google.com/?q=\(area.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? area)",
+            mapUrl: hasCoordinate ? "https://maps.apple.com/?ll=\(latitude!),\(longitude!)" : nil,
+            latitude: latitude,
+            longitude: longitude,
             createdAt: timestamp,
             updatedAt: timestamp
         )

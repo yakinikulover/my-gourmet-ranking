@@ -6,8 +6,10 @@ import Foundation
 /// and the legal links here avoids scattering environment values across the app.
 enum StoreConfig {
     /// App Store Connect non-consumable product identifier for the Pro unlock.
-    /// This must match the product configured in App Store Connect exactly.
-    static let proProductID = "com.mysmallgoodapps.gourmetrank.pro"
+    /// This MUST match the product configured in App Store Connect exactly.
+    /// (Mismatch here makes Product.products(for:) return empty → purchase errors,
+    ///  which caused the Guideline 2.1(b) review rejection.)
+    static let proProductID = "paymap_pro_lifetime"
 
     static let termsURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/terms.html")!
     static let privacyURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/privacy.html")!
@@ -15,7 +17,7 @@ enum StoreConfig {
     /// Debug-only switch that unlocks Pro for internal UAT without purchasing.
     /// Always false in Release builds, so production users never get a free unlock.
     #if DEBUG
-    static let forceProForUAT = true
+    static let forceProForUAT = false
     #else
     static let forceProForUAT = false
     #endif
