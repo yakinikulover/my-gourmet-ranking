@@ -9,7 +9,7 @@ enum StoreConfig {
     /// This MUST match the product configured in App Store Connect exactly.
     /// (Mismatch here makes Product.products(for:) return empty → purchase errors,
     ///  which caused the Guideline 2.1(b) review rejection.)
-    static let proProductID = "paymap_pro_lifetime"
+    static let proProductID = "com.mysmallgoodapps.gourmetrank2"
 
     static let termsURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/terms.html")!
     static let privacyURL = URL(string: "https://yakinikulover.github.io/my-gourmet-ranking/privacy.html")!
