@@ -18,7 +18,10 @@
       "type": "NonConsumable"
     }
   ],
-  "settings": {},
+  "settings": {
+    "_storefront": "JPN",
+    "_storeKitErrors": []
+  },
   "subscriptionGroups": [],
   "version": {
     "major": 4,
